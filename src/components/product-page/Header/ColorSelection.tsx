@@ -1,60 +1,6 @@
 "use client";
-
-import {
-  Color,
-  setColorSelection,
-} from "@/lib/features/products/productsSlice";
-import { useAppDispatch, useAppSelector } from "@/lib/hooks/redux";
-import { RootState } from "@/lib/store";
-import { cn } from "@/lib/utils";
 import React from "react";
+import { cn } from "@/lib/utils";
 import { IoMdCheckmark } from "react-icons/io";
-
-const colorsData: Color[] = [
-  {
-    name: "Brown",
-    code: "bg-[#4F4631]",
-  },
-  {
-    name: "Green",
-    code: "bg-[#314F4A]",
-  },
-  {
-    name: "Blue",
-    code: "bg-[#31344F]",
-  },
-];
-
-const ColorSelection = () => {
-  const { colorSelection } = useAppSelector(
-    (state: RootState) => state.products
-  );
-  const dispatch = useAppDispatch();
-
-  return (
-    <div className="flex flex-col">
-      <span className="text-sm sm:text-base text-black/60 mb-4">
-        Select Colors
-      </span>
-      <div className="flex items-center flex-wrap space-x-3 sm:space-x-4">
-        {colorsData.map((color, index) => (
-          <button
-            key={index}
-            type="button"
-            className={cn([
-              color.code,
-              "rounded-full w-9 sm:w-10 h-9 sm:h-10 flex items-center justify-center",
-            ])}
-            onClick={() => dispatch(setColorSelection(color))}
-          >
-            {colorSelection.name === color.name && (
-              <IoMdCheckmark className="text-base text-white" />
-            )}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-export default ColorSelection;
+const colorMap:Record<string,string>={White:"bg-white border border-black/20",Black:"bg-black",Blue:"bg-blue-800",Orange:"bg-orange-500",Beige:"bg-[#d6c1a1]",Yellow:"bg-yellow-400",Pink:"bg-pink-300",Gray:"bg-gray-500","Black & White":"bg-gradient-to-r from-black from-50% to-white to-50%","Mixed Graphic":"bg-gradient-to-br from-black via-white to-gray-500","Mixed Blue":"bg-gradient-to-br from-blue-900 via-sky-400 to-white"};
+export default function ColorSelection({value,onChange,colors}:{value:string;onChange:(v:string)=>void;colors:string[]}){return <div className="flex flex-col"><span className="text-sm sm:text-base text-black/60 mb-4">Select Color — <span className="text-black">{value}</span></span><div className="flex items-center flex-wrap gap-3">{colors.map(c=><button key={c} aria-label={c} title={c} type="button" className={cn(colorMap[c]||"bg-gray-200", "rounded-full w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center ring-1 ring-black/10")} onClick={()=>onChange(c)}>{value===c&&<IoMdCheckmark className={cn("text-base", c==="White"||c==="Beige"||c==="Yellow"||c==="Pink"?"text-black":"text-white")}/>}</button>)}</div></div>}

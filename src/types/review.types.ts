@@ -4,4 +4,5 @@ export type Review = {
   content: string;
   rating: number;
   date: string;
+  verified?: boolean;
 };

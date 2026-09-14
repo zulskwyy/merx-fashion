@@ -1,15 +1,1 @@
-import React from "react";
-import ProductDetails from "./ProductDetails";
-
-const ProductDetailsContent = () => {
-  return (
-    <section>
-      <h3 className="text-xl sm:text-2xl font-bold text-black mb-5 sm:mb-6">
-        Product specifications
-      </h3>
-      <ProductDetails />
-    </section>
-  );
-};
-
-export default ProductDetailsContent;
+import React from "react";import ProductDetails from "./ProductDetails";import {Product} from "@/types/product.types";export default function ProductDetailsContent({product}:{product:Product}){return <section><h3 className="text-xl sm:text-2xl font-bold text-black mb-3">Product specifications</h3><p className="text-sm sm:text-base text-black/60 mb-5">Source reference: Pexels photo {product.sourceId}. Visual merchandising data is populated from the supplied CSV; supplier-only facts are explicitly marked when unconfirmed.</p><ProductDetails details={product.details}/></section>}
