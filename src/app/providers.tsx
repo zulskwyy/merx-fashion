@@ -5,6 +5,7 @@ import { Provider } from "react-redux";
 import { makeStore } from "../lib/store";
 import { PersistGate } from "redux-persist/integration/react";
 import SpinnerbLoader from "@/components/ui/SpinnerbLoader";
+import { I18nProvider } from "@/lib/i18n";
 
 type Props = {
   children: React.ReactNode;
@@ -14,6 +15,7 @@ const Providers = ({ children }: Props) => {
   const { store, persistor } = makeStore();
 
   return (
+    <I18nProvider>
     <Provider store={store}>
       <PersistGate
         loading={
@@ -26,6 +28,7 @@ const Providers = ({ children }: Props) => {
         {children}
       </PersistGate>
     </Provider>
+    </I18nProvider>
   );
 };
 

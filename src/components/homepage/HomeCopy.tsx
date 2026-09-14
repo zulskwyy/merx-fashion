@@ -1,0 +1,2 @@
+"use client";import ProductListSec from "@/components/common/ProductListSec";import {Product} from "@/types/product.types";import {useI18n} from "@/lib/i18n";
+export default function HomeCopy({type,data}:{type:"new"|"top";data:Product[]}){const {t}=useI18n();return <ProductListSec title={type==="new"?t("newArrivals"):t("topSelling")} data={data} viewAllLink={`/shop?sort=${type==="new"?"new":"popular"}`} viewAllLabel={t("viewAll")}/>}

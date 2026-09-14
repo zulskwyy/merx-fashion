@@ -1,4 +1,5 @@
 "use client";
+import {useI18n} from "@/lib/i18n";
 
 import React from "react";
 import * as motion from "framer-motion/client";
@@ -20,6 +21,7 @@ import { Review } from "@/types/review.types";
 type ReviewsProps = { data: Review[] };
 
 const Reviews = ({ data }: ReviewsProps) => {
+  const {t}=useI18n();
   const [api, setApi] = React.useState<CarouselApi>();
   const [current, setCurrent] = React.useState(0);
   const [count, setCount] = React.useState(0);
@@ -68,7 +70,7 @@ const Reviews = ({ data }: ReviewsProps) => {
                 "text-[32px] leading-[36px] md:text-5xl capitalize mr-auto",
               ])}
             >
-              OUR HAPPY CUSTOMERS
+              {t("happyReviews")}
             </motion.h2>
             <div className="flex items-center space-x-1 ml-2">
               <CarouselPrevious variant="ghost" className="text-2xl">

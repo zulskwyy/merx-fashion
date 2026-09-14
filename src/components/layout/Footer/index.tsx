@@ -1,3 +1,4 @@
+"use client";
 import { cn } from "@/lib/utils";
 import { integralCF } from "@/styles/fonts";
 import React from "react";
@@ -8,6 +9,7 @@ import LinksSection from "./LinksSection";
 import Image from "next/image";
 import NewsLetterSection from "./NewsLetterSection";
 import LayoutSpacing from "./LayoutSpacing";
+import {useI18n} from "@/lib/i18n";
 
 const socialsData: SocialNetworks[] = [
   {
@@ -56,6 +58,7 @@ const paymentBadgesData: PaymentBadge[] = [
 ];
 
 const Footer = () => {
+  const {t}=useI18n();
   return (
     <footer className="mt-10">
       <div className="relative">
@@ -77,8 +80,7 @@ const Footer = () => {
                 MERX
               </h1>
               <p className="text-black/60 text-sm mb-9">
-                Timeless pieces, made to last. Curated fashion for those who
-                value quality over trend.
+                Gaya yang dibuat untuk dipakai lebih lama. Koleksi terpilih dengan perhatian pada kualitas dan kenyamanan.
               </p>
               <div className="flex items-center">
                 {socialsData.map((social) => (
@@ -119,7 +121,7 @@ const Footer = () => {
                     src={badge.srcUrl}
                     width={33}
                     height={100}
-                    alt="user"
+                    alt="payment"
                     className="max-h-[15px]"
                   />
                 </span>
