@@ -9,9 +9,9 @@ import { Review } from "@/types/review.types";
 export const newArrivalsData: Product[] = [
   {
     id: 1,
-    title: "T-shirt with Tape Details",
-    srcUrl: "/images/pic1.png",
-    gallery: ["/images/pic1.png", "/images/pic10.png", "/images/pic11.png"],
+    title: "Essential Crew Tee — White",
+    srcUrl: "/images/product-01.jpg",
+    gallery: ["/images/product-01.jpg"],
     price: 120,
     discount: {
       amount: 0,
@@ -21,10 +21,10 @@ export const newArrivalsData: Product[] = [
   },
   {
     id: 2,
-    title: "Skinny Fit Jeans",
-    srcUrl: "/images/pic2.png",
-    gallery: ["/images/pic2.png"],
-    price: 260,
+    title: "Relaxed Cotton Tee — White",
+    srcUrl: "/images/product-02.jpg",
+    gallery: ["/images/product-02.jpg"],
+    price: 135,
     discount: {
       amount: 0,
       percentage: 20,
@@ -33,10 +33,10 @@ export const newArrivalsData: Product[] = [
   },
   {
     id: 3,
-    title: "Chechered Shirt",
-    srcUrl: "/images/pic3.png",
-    gallery: ["/images/pic3.png"],
-    price: 180,
+    title: "Essential Crew Tee — Black",
+    srcUrl: "/images/product-03.jpg",
+    gallery: ["/images/product-03.jpg"],
+    price: 130,
     discount: {
       amount: 0,
       percentage: 0,
@@ -45,10 +45,10 @@ export const newArrivalsData: Product[] = [
   },
   {
     id: 4,
-    title: "Sleeve Striped T-shirt",
-    srcUrl: "/images/pic4.png",
-    gallery: ["/images/pic4.png", "/images/pic10.png", "/images/pic11.png"],
-    price: 160,
+    title: "Signature Tee — Ivory",
+    srcUrl: "/images/product-04.jpg",
+    gallery: ["/images/product-04.jpg"],
+    price: 140,
     discount: {
       amount: 0,
       percentage: 30,
@@ -60,10 +60,10 @@ export const newArrivalsData: Product[] = [
 export const topSellingData: Product[] = [
   {
     id: 5,
-    title: "Vertical Striped Shirt",
-    srcUrl: "/images/pic5.png",
-    gallery: ["/images/pic5.png", "/images/pic10.png", "/images/pic11.png"],
-    price: 232,
+    title: "Tailored Tee — Black",
+    srcUrl: "/images/product-05.jpg",
+    gallery: ["/images/product-05.jpg"],
+    price: 145,
     discount: {
       amount: 0,
       percentage: 20,
@@ -72,10 +72,10 @@ export const topSellingData: Product[] = [
   },
   {
     id: 6,
-    title: "Courage Graphic T-shirt",
-    srcUrl: "/images/pic6.png",
-    gallery: ["/images/pic6.png", "/images/pic10.png", "/images/pic11.png"],
-    price: 145,
+    title: "Studio Tee — Natural",
+    srcUrl: "/images/product-06.jpg",
+    gallery: ["/images/product-06.jpg"],
+    price: 125,
     discount: {
       amount: 0,
       percentage: 0,
@@ -84,10 +84,10 @@ export const topSellingData: Product[] = [
   },
   {
     id: 7,
-    title: "Loose Fit Bermuda Shorts",
-    srcUrl: "/images/pic7.png",
-    gallery: ["/images/pic7.png"],
-    price: 80,
+    title: "Heritage Tee — Rust",
+    srcUrl: "/images/product-07.jpg",
+    gallery: ["/images/product-07.jpg"],
+    price: 150,
     discount: {
       amount: 0,
       percentage: 0,
@@ -96,10 +96,10 @@ export const topSellingData: Product[] = [
   },
   {
     id: 8,
-    title: "Faded Skinny Jeans",
-    srcUrl: "/images/pic8.png",
-    gallery: ["/images/pic8.png"],
-    price: 210,
+    title: "Classic Tee — White",
+    srcUrl: "/images/product-08.jpg",
+    gallery: ["/images/product-08.jpg"],
+    price: 120,
     discount: {
       amount: 0,
       percentage: 0,
@@ -111,10 +111,10 @@ export const topSellingData: Product[] = [
 export const relatedProductData: Product[] = [
   {
     id: 12,
-    title: "Polo with Contrast Trims",
-    srcUrl: "/images/pic12.png",
-    gallery: ["/images/pic12.png", "/images/pic10.png", "/images/pic11.png"],
-    price: 242,
+    title: "Studio Tee — Ivory",
+    srcUrl: "/images/product-09.jpg",
+    gallery: ["/images/product-09.jpg"],
+    price: 155,
     discount: {
       amount: 0,
       percentage: 20,
@@ -123,10 +123,10 @@ export const relatedProductData: Product[] = [
   },
   {
     id: 13,
-    title: "Gradient Graphic T-shirt",
-    srcUrl: "/images/pic13.png",
-    gallery: ["/images/pic13.png", "/images/pic10.png", "/images/pic11.png"],
-    price: 145,
+    title: "Active Tee — White",
+    srcUrl: "/images/product-10.jpg",
+    gallery: ["/images/product-10.jpg"],
+    price: 125,
     discount: {
       amount: 0,
       percentage: 0,
@@ -135,10 +135,10 @@ export const relatedProductData: Product[] = [
   },
   {
     id: 14,
-    title: "Polo with Tipping Details",
-    srcUrl: "/images/pic14.png",
-    gallery: ["/images/pic14.png"],
-    price: 180,
+    title: "Minimalist Tee — White",
+    srcUrl: "/images/product-11.jpg",
+    gallery: ["/images/product-11.jpg"],
+    price: 130,
     discount: {
       amount: 0,
       percentage: 0,
@@ -147,10 +147,10 @@ export const relatedProductData: Product[] = [
   },
   {
     id: 15,
-    title: "Black Striped T-shirt",
-    srcUrl: "/images/pic15.png",
-    gallery: ["/images/pic15.png"],
-    price: 150,
+    title: "Countryside Tee — Ivory",
+    srcUrl: "/images/product-12.jpg",
+    gallery: ["/images/product-12.jpg"],
+    price: 140,
     discount: {
       amount: 0,
       percentage: 30,
