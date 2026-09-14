@@ -1,6 +1,5 @@
 "use client";
-import React, { useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import React, { useEffect, useMemo, useState } from "react";
 import ProductCard from "@/components/common/ProductCard";
 import { products } from "@/data/products";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,8 +9,8 @@ import Link from "next/link";
 
 const PAGE_SIZE=12;
 export default function ShopPage(){
- const params=useSearchParams(); const q=params.get("q")||""; const initialCategory=params.get("category")||"All";
- const [query,setQuery]=useState(q); const [category,setCategory]=useState(initialCategory); const [color,setColor]=useState("All"); const [gender,setGender]=useState("All"); const [sort,setSort]=useState(params.get("sort")==="new"?"new":params.get("sort")==="popular"?"popular":"popular"); const [page,setPage]=useState(1); const [open,setOpen]=useState(false);
+ const [query,setQuery]=useState(""); const [category,setCategory]=useState("All"); const [color,setColor]=useState("All"); const [gender,setGender]=useState("All"); const [sort,setSort]=useState("popular"); const [page,setPage]=useState(1); const [open,setOpen]=useState(false);
+ useEffect(()=>{const sp=new URLSearchParams(window.location.search); setQuery(sp.get("q")||""); setCategory(sp.get("category")||"All"); const requestedSort=sp.get("sort"); setSort(requestedSort==="new"||requestedSort==="low"||requestedSort==="high"||requestedSort==="popular"?requestedSort:"popular");},[]);
  const categories=["All",...Array.from(new Set(products.map(p=>p.category)))]; const colors=["All",...Array.from(new Set(products.map(p=>p.color)))]; const genders=["All",...Array.from(new Set(products.map(p=>p.gender)))];
  const filtered=useMemo(()=>{ let out=products.filter(p=>{const hay=`${p.title} ${p.category} ${p.color} ${p.gender}`.toLowerCase(); return (!query||hay.includes(query.toLowerCase()))&&(category==="All"||p.category===category)&&(color==="All"||p.color===color)&&(gender==="All"||p.gender===gender)}); if(sort==="low") out.sort((a,b)=>a.price-b.price); if(sort==="high") out.sort((a,b)=>b.price-a.price); if(sort==="new") out.sort((a,b)=>a.id-b.id); if(sort==="popular") out.sort((a,b)=>b.rating-a.rating); return out;},[query,category,color,gender,sort]);
  const totalPages=Math.max(1,Math.ceil(filtered.length/PAGE_SIZE)); const shown=filtered.slice((page-1)*PAGE_SIZE,page*PAGE_SIZE);
