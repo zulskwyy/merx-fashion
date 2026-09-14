@@ -71,7 +71,7 @@ const Footer = () => {
               <h1
                 className={cn([
                   integralCF.className,
-                  "text-[28px] lg:text-[32px] mb-6",
+                  "text-[28px] lg:text-[32px] mb-6 text-[#1B2A4A]",
                 ])}
               >
                 MERX
