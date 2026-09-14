@@ -7,7 +7,6 @@ import { integralCF } from "@/styles/fonts";
 import { useI18n } from "@/lib/i18n";
 import { products } from "@/data/products";
 import { formatIDR, discountedPrice } from "@/lib/catalog";
-import Image from "next/image";
 
 const HERO_IDS = [0, 4, 6];
 
@@ -115,13 +114,14 @@ export default function Header() {
                 transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
                 className="absolute inset-0"
               >
-                <Image
-                  src={product.srcUrl}
-                  alt={product.title}
-                  fill
-                  priority
-                  sizes="(max-width: 768px) 100vw, 55vw"
-                  className="object-cover object-center"
+                <img
+                  src={product?.srcUrl || "/images/header-homepage.png"}
+                  alt={product?.title || "Koleksi MERX"}
+                  className="h-full w-full object-cover object-center"
+                  loading={active === 0 ? "eager" : "lazy"}
+                  onError={(event) => {
+                    event.currentTarget.src = "/images/header-homepage.png";
+                  }}
                 />
               </motion.div>
             )}
