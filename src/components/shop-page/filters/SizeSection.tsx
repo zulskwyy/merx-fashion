@@ -35,8 +35,8 @@ const SizeSection = () => {
                 key={index}
                 type="button"
                 className={cn([
-                  "bg-[#F3EFE7] m-1 flex items-center justify-center px-5 py-2.5 text-sm rounded-full max-h-[39px]",
-                  selected === size && "bg-black font-medium text-white",
+                  "border border-black/15 bg-transparent m-1 flex items-center justify-center px-5 py-2.5 text-sm max-h-[39px] transition-colors",
+                  selected === size && "bg-[#1B2A4A] border-[#1B2A4A] font-medium text-white",
                 ])}
                 onClick={() => setSelected(size)}
               >

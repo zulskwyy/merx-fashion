@@ -93,14 +93,14 @@ export default function CartPage() {
                   </InputGroup>
                   <Button
                     type="button"
-                    className="bg-black rounded-full w-full max-w-[119px] h-[48px]"
+                    className="bg-[#1B2A4A] w-full max-w-[119px] h-[48px]"
                   >
                     Apply
                   </Button>
                 </div>
                 <Button
                   type="button"
-                  className="text-sm md:text-base font-medium bg-black rounded-full w-full py-4 h-[54px] md:h-[60px] group"
+                  className="text-sm md:text-base tracking-[0.1em] uppercase font-medium bg-[#1B2A4A] w-full py-4 h-[54px] md:h-[60px] group"
                 >
                   Go to Checkout{" "}
                   <FaArrowRight className="text-xl ml-2 group-hover:translate-x-1 transition-all" />
@@ -112,7 +112,7 @@ export default function CartPage() {
           <div className="flex items-center flex-col text-gray-300 mt-32">
             <TbBasketExclamation strokeWidth={1} className="text-6xl" />
             <span className="block mb-4">Your shopping cart is empty.</span>
-            <Button className="rounded-full w-24" asChild>
+            <Button className="w-24" asChild>
               <Link href="/shop">Shop</Link>
             </Button>
           </div>

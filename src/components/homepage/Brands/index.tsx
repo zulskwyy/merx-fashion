@@ -12,7 +12,7 @@ const collectionsData: { id: string; label: string }[] = [
 
 const Brands = () => {
   return (
-    <div className="bg-[#1A1816]">
+    <div className="bg-[#1B2A4A]">
       <div className="max-w-frame mx-auto flex flex-wrap items-center justify-center md:justify-between py-5 md:py-0 sm:px-4 xl:px-0 space-x-7">
         {collectionsData.map((collection) => (
           <span

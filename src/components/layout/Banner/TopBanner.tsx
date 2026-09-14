@@ -5,7 +5,7 @@ import React from "react";
 
 const TopBanner = () => {
   return (
-    <div className="bg-[#1A1816] text-[#D4C4A8] text-center py-2 px-2 sm:px-4 xl:px-0">
+    <div className="bg-[#1B2A4A] text-[#D4C4A8] text-center py-2 px-2 sm:px-4 xl:px-0">
       <div className="relative max-w-frame mx-auto">
         <p className="text-xs sm:text-sm">
           Sign up and get 20% off to your first order.{" "}

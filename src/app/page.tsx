@@ -209,7 +209,6 @@ export default function Home() {
   return (
     <>
       <Header />
-      <Brands />
       <main className="my-[50px] sm:my-[72px]">
         <ProductListSec
           title="NEW ARRIVALS"
@@ -220,14 +219,15 @@ export default function Home() {
           <hr className="h-[1px] border-t-black/10 my-10 sm:my-16" />
         </div>
         <div className="mb-[50px] sm:mb-20">
+          <DressStyle />
+        </div>
+        <Brands />
+        <div className="mt-[50px] sm:mt-20 mb-[50px] sm:mb-20">
           <ProductListSec
             title="top selling"
             data={topSellingData}
             viewAllLink="/shop#top-selling"
           />
-        </div>
-        <div className="mb-[50px] sm:mb-20">
-          <DressStyle />
         </div>
         <Reviews data={reviewsData} />
       </main>
