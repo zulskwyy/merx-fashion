@@ -1,4 +1,5 @@
 import { Product } from "@/types/product.types";
+import { products } from "@/data/products";
 
 const url = process.env.SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -30,3 +31,51 @@ export type StoreSettings = {
   heroImageUrl: string;
   updatedAt?: string;
 };
+
+
+export async function ensureProductsSeeded() {
+  if (!dbConfigured) return false;
+
+  const existing = await supabaseRequest<Array<{ id: number }>>(
+    "products?select=id&limit=500"
+  );
+
+  if ((existing?.length ?? 0) >= products.length) return false;
+
+  const rows = products.map((p) => ({
+    id: p.id,
+    title: p.title,
+    slug: p.slug,
+    src_url: p.srcUrl,
+    gallery: p.gallery,
+    price: p.price,
+    discount: p.discount,
+    rating: p.rating,
+    review_count: p.reviewCount,
+    category: p.category,
+    gender: p.gender,
+    color: p.color,
+    sizes: p.sizes,
+    description: p.description,
+    details: p.details,
+    faqs: p.faqs,
+    reviews: p.reviews,
+    source_page: p.sourcePage,
+    source_id: p.sourceId,
+    source_description: p.sourceDescription,
+    stock: 20,
+    cost_price: Math.round(p.price * 0.55),
+    is_active: true,
+    updated_at: new Date().toISOString(),
+  }));
+
+  await supabaseRequest("products", {
+    method: "POST",
+    headers: {
+      Prefer: "resolution=merge-duplicates,return=minimal",
+    },
+    body: JSON.stringify(rows),
+  });
+
+  return true;
+}

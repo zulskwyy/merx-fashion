@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { getAdminEmail } from "@/lib/server/admin-auth";
 import { products } from "@/data/products";
-import { dbConfigured, supabaseRequest } from "@/lib/server/supabase";
+import { dbConfigured, ensureProductsSeeded, supabaseRequest } from "@/lib/server/supabase";
 
 function guard() { if (!getAdminEmail()) return NextResponse.json({ error: "Unauthorized" }, { status: 401 }); if (!dbConfigured) return NextResponse.json({ error: "Database belum dikonfigurasi." }, { status: 503 }); return null; }
-export async function GET() { const denied=guard(); if(denied)return denied; const rows=await supabaseRequest<any[]>("products?select=*&order=id.asc&limit=500"); return NextResponse.json(rows); }
+export async function GET() { const denied=guard(); if(denied)return denied; await ensureProductsSeeded(); const rows=await supabaseRequest<any[]>("products?select=*&order=id.asc&limit=500"); return NextResponse.json(rows); }
 export async function POST(req:Request) {
   const denied=guard(); if(denied)return denied;
   const body=await req.json();
