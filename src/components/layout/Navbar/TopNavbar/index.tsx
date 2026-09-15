@@ -12,6 +12,7 @@ import SearchBox from "./SearchBox";
 import ResTopNavbar from "./ResTopNavbar";
 import CartBtn from "./CartBtn";
 import { useI18n } from "@/lib/i18n";
+import { useStoreSettings } from "@/lib/store-settings";
 
 const data: NavMenu = [
   {id:1,label:"Shop",type:"MenuList",children:[
@@ -26,13 +27,13 @@ const data: NavMenu = [
 ];
 
 export default function TopNavbar(){
-  const {t}=useI18n();
+  const {t}=useI18n(); const settings=useStoreSettings();
   const [mobileSearch, setMobileSearch] = useState(false);
   const labels: Record<number,string>={1:t("shop"),2:t("sale"),3:t("newArrivals"),4:t("about")};
   const localized=data.map(item=>({...item,label:labels[item.id]||item.label,children:item.children.map(c=>({...c,label:c.id===11?(t("gender")+" pria"):c.id===12?(t("gender")+" wanita"):c.id===13?(t("gender")+" unisex"):t("viewAll")}))}));
   return <nav className="sticky top-0 bg-white z-20 border-b border-black/5">
     <div className="flex relative max-w-frame mx-auto items-center justify-between md:justify-start py-5 md:py-6 px-4 xl:px-0">
-      <div className="flex items-center"><div className="block md:hidden mr-4"><ResTopNavbar data={localized}/></div><Link href="/" className={cn(integralCF.className,"text-2xl lg:text-[32px] mb-2 mr-3 lg:mr-10 text-[#1B2A4A]")}>MERX</Link></div>
+      <div className="flex items-center"><div className="block md:hidden mr-4"><ResTopNavbar data={localized}/></div><Link href="/" className={cn(integralCF.className,"text-2xl lg:text-[32px] mb-2 mr-3 lg:mr-10")} style={{color:settings.primaryColor}}>{settings.storeName}</Link></div>
       <NavigationMenu className="hidden md:flex mr-2 lg:mr-7"><NavigationMenuList>{localized.map(item=><React.Fragment key={item.id}>{item.type==="MenuItem"?<MenuItem label={item.label} url={item.url}/>:<MenuList data={item.children} label={item.label}/>}</React.Fragment>)}</NavigationMenuList></NavigationMenu>
       <SearchBox/>
       <div className="flex items-center ml-2">

@@ -1,9 +1,3 @@
-import ProductListSec from "@/components/common/ProductListSec";
-import BreadcrumbProduct from "@/components/product-page/BreadcrumbProduct";
-import Header from "@/components/product-page/Header";
-import Tabs from "@/components/product-page/Tabs";
-import {products} from "@/data/products";
-import {notFound} from "next/navigation";
-import RelatedProductsTitle from "@/components/product-page/RelatedProductsTitle";
-export function generateStaticParams(){return products.map(p=>({slug:[String(p.id),p.slug]}));}
-export default function ProductPage({params}:{params:{slug:string[]}}){const product=products.find(p=>p.id===Number(params.slug[0])); if(!product) notFound(); const related=products.filter(p=>p.id!==product.id&&p.category===product.category).slice(0,8); return <main><div className="max-w-frame mx-auto px-4 xl:px-0"><hr className="h-[1px] border-t-black/10 mb-5 sm:mb-6"/><BreadcrumbProduct title={product.title}/><section className="mb-11"><Header data={product}/></section><Tabs product={product}/></div><div className="mb-[50px] sm:mb-20"><RelatedProductsTitle data={related}/></div></main>}
+"use client";
+import {useEffect,useState} from "react"; import ProductListSec from "@/components/common/ProductListSec"; import BreadcrumbProduct from "@/components/product-page/BreadcrumbProduct"; import Header from "@/components/product-page/Header"; import Tabs from "@/components/product-page/Tabs"; import {products as fallbackProducts} from "@/data/products"; import RelatedProductsTitle from "@/components/product-page/RelatedProductsTitle";
+export default function ProductPage({params}:{params:{slug:string[]}}){const [products,setProducts]=useState(fallbackProducts);const id=Number(params.slug?.[0]);useEffect(()=>{fetch('/api/catalog').then(r=>r.json()).then(v=>Array.isArray(v)&&v.length&&setProducts(v)).catch(()=>{})},[]);const product=products.find(p=>p.id===id);if(!product)return <main className="max-w-frame mx-auto px-4 py-20">Memuat produk…</main>;const related=products.filter(p=>p.id!==product.id&&p.category===product.category).slice(0,8);return <main><div className="max-w-frame mx-auto px-4 xl:px-0"><hr className="h-[1px] border-t-black/10 mb-5 sm:mb-6"/><BreadcrumbProduct title={product.title}/><section className="mb-11"><Header data={product}/></section><Tabs product={product}/></div><div className="mb-[50px] sm:mb-20"><RelatedProductsTitle data={related}/></div></main>}

@@ -7,16 +7,20 @@ import { integralCF } from "@/styles/fonts";
 import { useI18n } from "@/lib/i18n";
 import { products } from "@/data/products";
 import { formatIDR, discountedPrice } from "@/lib/catalog";
+import { useStoreSettings } from "@/lib/store-settings";
 
 const HERO_IDS = [0, 4, 6];
 
 export default function Header() {
   const { t } = useI18n();
+  const settings = useStoreSettings();
   const [active, setActive] = useState(0);
+  const [catalog, setCatalog] = useState(products);
+  useEffect(() => { fetch("/api/catalog").then(r=>r.json()).then(v=>{ if (Array.isArray(v) && v.length) setCatalog(v); }).catch(()=>{}); }, []);
 
   const slides = useMemo(
-    () => HERO_IDS.map((index) => products[index]).filter(Boolean),
-    []
+    () => HERO_IDS.map((index) => catalog[index]).filter(Boolean),
+    [catalog]
   );
 
   useEffect(() => {
@@ -46,18 +50,18 @@ export default function Header() {
               MERX / {t("newCollection")}
             </p>
             <h1
-              className={`${integralCF.className} max-w-[630px] text-5xl leading-[1.02] text-[#1B2A4A] sm:text-6xl lg:text-[74px]`}
+              className={`${integralCF.className} max-w-[630px] text-5xl leading-[1.02] sm:text-6xl lg:text-[74px]`}
             >
-              {t("timeless")}
+              {settings.heroTitle || t("timeless")}
             </h1>
             <p className="mt-7 max-w-[540px] text-base leading-7 text-black/60 lg:text-lg">
-              {t("heroText")}
+              {settings.heroDescription || t("heroText")}
             </p>
 
             <div className="mt-9 flex flex-wrap items-center gap-4">
               <Link
                 href="/shop"
-                className="inline-flex h-12 items-center justify-center rounded-full bg-[#1B2A4A] px-8 text-sm font-medium text-white transition duration-300 hover:-translate-y-0.5 hover:bg-[#24385f]"
+                className="inline-flex h-12 items-center justify-center rounded-full px-8 text-sm font-medium text-white transition duration-300 hover:-translate-y-0.5 hover:opacity-90" style={{ backgroundColor: settings.primaryColor }}
               >
                 {t("shopNow")}
                 <span aria-hidden="true" className="ml-3 text-base">
@@ -85,7 +89,7 @@ export default function Header() {
                 <p className="text-[11px] uppercase tracking-[0.18em] text-black/40">
                   Ukuran
                 </p>
-                <p className="mt-1 text-sm font-medium text-[#1B2A4A]">
+                <p className="mt-1 text-sm font-medium text-[#1B2A4A]" style={{color: settings.primaryColor}}>
                   {product?.sizes?.slice(0, 4).join(" · ") || "XS · S · M · L"}
                 </p>
               </div>
@@ -93,7 +97,7 @@ export default function Header() {
                 <p className="text-[11px] uppercase tracking-[0.18em] text-black/40">
                   Harga mulai
                 </p>
-                <p className="mt-1 text-sm font-medium text-[#1B2A4A]">
+                <p className="mt-1 text-sm font-medium text-[#1B2A4A]" style={{color: settings.primaryColor}}>
                   {product ? formatIDR(salePrice) : "—"}
                 </p>
               </div>
@@ -115,13 +119,11 @@ export default function Header() {
                 className="absolute inset-0"
               >
                 <img
-                  src={product?.srcUrl || "/images/header-homepage.png"}
-                  alt={product?.title || "Koleksi MERX"}
+                  src={product?.srcUrl || settings.heroImageUrl}
+                  alt={product?.title || settings.storeName}
                   className="h-full w-full object-cover object-center"
                   loading={active === 0 ? "eager" : "lazy"}
-                  onError={(event) => {
-                    event.currentTarget.src = "/images/header-homepage.png";
-                  }}
+                  onError={(event) => { event.currentTarget.src = settings.heroImageUrl || "/images/header-homepage.png"; }}
                 />
               </motion.div>
             )}
@@ -197,7 +199,7 @@ export default function Header() {
             className="absolute right-5 top-5 hidden rounded-2xl border border-white/30 bg-white/85 px-4 py-3 shadow-[0_18px_50px_rgba(0,0,0,0.12)] backdrop-blur-md sm:block"
           >
             <p className="text-[10px] font-medium uppercase tracking-[0.24em] text-black/45">
-              MERX
+              {settings.storeName}
             </p>
             <p className="mt-1 text-sm font-medium text-[#1B2A4A]">
               {t("browseStyle")}
