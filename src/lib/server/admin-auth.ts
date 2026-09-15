@@ -25,7 +25,10 @@ export function clearAdminCookie() { cookies().set(COOKIE, "", { httpOnly: true,
 export function getAdminEmail() {
   const value = cookies().get(COOKIE)?.value;
   if (!value) return null;
-  const [email, signature] = value.split(".");
-  if (!email || !signature || !process.env.MERX_ADMIN_SECRET) return null;
+  const separator = value.lastIndexOf(".");
+  if (separator <= 0 || !process.env.MERX_ADMIN_SECRET) return null;
+  const email = value.slice(0, separator);
+  const signature = value.slice(separator + 1);
+  if (!email || !signature) return null;
   return sign(email) === signature ? email : null;
 }
