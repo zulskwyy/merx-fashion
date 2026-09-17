@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import ProductCard from "@/components/common/ProductCard";
 import { products as fallbackProducts } from "@/data/products";
 import type { Product } from "@/types/product.types";
@@ -67,13 +68,11 @@ function productMatchesStyle(product: Product, style: string) {
   return (STYLE_RULES[normalize(style)] || []).some((term) => haystack.includes(term));
 }
 
-function parseUrlFilter(name: string, fallback = "") {
-  const value = new URLSearchParams(window.location.search).get(name);
-  return value || fallback;
-}
-
 export default function ShopPage() {
   const { t } = useI18n();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [products, setProducts] = useState<Product[]>(fallbackProducts);
   const [loadedFromDb, setLoadedFromDb] = useState(false);
   const [open, setOpen] = useState(false);
@@ -92,14 +91,30 @@ export default function ShopPage() {
   const [applied, setApplied] = useState<ShopFilters>(draft);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const categoryParam = params.get("category");
-    const colorParam = params.get("color");
-    const genderParam = params.get("gender");
-    const sizeParam = params.get("size");
-    const styleParam = params.get("style");
-    const sortParam = params.get("sort");
-    const q = params.get("q") || "";
+    const categoryParam = searchParams.get("category");
+    const colorParam = searchParams.get("color");
+    const genderParam = searchParams.get("gender");
+    const sizeParam = searchParams.get("size");
+    const styleParam = searchParams.get("style");
+    const sortParam = searchParams.get("sort");
+    const q = searchParams.get("q") || "";
+    const fallbackMax = Math.max(0, ...fallbackProducts.map((p) => p.price));
+
+    const nextFromUrl: ShopFilters = {
+      query: q,
+      category: categoryParam || "All",
+      color: colorParam || "All",
+      gender: genderParam || "All",
+      size: sizeParam || "All",
+      style: styleParam || "All",
+      minPrice: Number(searchParams.get("minPrice") || 0),
+      maxPrice: Number(searchParams.get("maxPrice") || fallbackMax),
+      sort: ["new", "low", "high", "popular"].includes(sortParam || "") ? String(sortParam) : "popular",
+    };
+
+    setDraft(nextFromUrl);
+    setApplied(nextFromUrl);
+    setPage(1);
 
     fetch("/api/catalog")
       .then((response) => response.json())
@@ -108,26 +123,13 @@ export default function ShopPage() {
           setProducts(value as Product[]);
           setLoadedFromDb(true);
           const maxPrice = Math.max(0, ...(value as Product[]).map((p) => Number(p.price) || 0));
-          setDraft((current) => ({ ...current, maxPrice }));
-          setApplied((current) => ({ ...current, maxPrice }));
+          setDraft((current) => ({ ...current, maxPrice: searchParams.get("maxPrice") ? current.maxPrice : maxPrice }));
+          setApplied((current) => ({ ...current, maxPrice: searchParams.get("maxPrice") ? current.maxPrice : maxPrice }));
         }
       })
       .catch(() => undefined);
+  }, [searchParams, pathname]);
 
-    const next: ShopFilters = {
-      query: q,
-      category: categoryParam || "All",
-      color: colorParam || "All",
-      gender: genderParam || "All",
-      size: sizeParam || "All",
-      style: styleParam || "All",
-      minPrice: Number(params.get("minPrice") || 0),
-      maxPrice: Number(params.get("maxPrice") || Math.max(0, ...fallbackProducts.map((p) => p.price))),
-      sort: ["new", "low", "high", "popular"].includes(sortParam || "") ? String(sortParam) : "popular",
-    };
-    setDraft(next);
-    setApplied(next);
-  }, []);
 
   const categories = useMemo(
     () => ["All", ...Array.from(new Set(products.map((p) => p.category).filter(Boolean)))],
@@ -193,9 +195,10 @@ export default function ShopPage() {
     if (next.minPrice > 0) params.set("minPrice", String(next.minPrice));
     if (next.maxPrice < maxProductPrice) params.set("maxPrice", String(next.maxPrice));
     if (next.sort !== "popular") params.set("sort", next.sort);
-    const url = params.toString() ? `/shop?${params.toString()}` : "/shop";
-    window.history.replaceState({}, "", url);
+    const query = params.toString();
+    router.replace(query ? `/shop?${query}` : "/shop", { scroll: false });
   }
+
 
   function applyFilters(next = draft) {
     const safeMax = Math.max(next.minPrice, next.maxPrice);
