@@ -6,6 +6,7 @@ create table if not exists store_settings (
   hero_title text not null default 'Gaya yang tetap relevan, dibuat untuk dikenakan lama',
   hero_description text not null default 'Koleksi terpilih untuk kamu yang mengutamakan kualitas, kenyamanan, dan gaya yang tidak berlebihan.',
   hero_image_url text not null default '/images/header-homepage.png',
+  business jsonb not null default '{}'::jsonb,
   updated_at timestamptz not null default now()
 );
 insert into store_settings(id) values (1) on conflict (id) do nothing;
@@ -17,7 +18,8 @@ create table if not exists products (
   src_url text not null,
   gallery jsonb not null default '[]'::jsonb,
   price bigint not null default 0,
-  discount jsonb not null default '{"amount":0,"percentage":0}'::jsonb,
+  discount jsonb not null default '{"amount":0,"percentage":0,"source":"manual"}'::jsonb,
+  pricing jsonb not null default '{"mode":"manual","target":0}'::jsonb,
   rating numeric(3,2) not null default 0,
   review_count integer not null default 0,
   category text not null default 'Other',
@@ -48,7 +50,10 @@ create table if not exists orders (
   status text not null default 'paid',
   total bigint not null default 0,
   cost_total bigint not null default 0,
-  created_at timestamptz not null default now()
+  shipping jsonb not null default '{}'::jsonb,
+  other_cost bigint not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 create table if not exists order_items (
   id bigserial primary key,
@@ -77,6 +82,17 @@ create table if not exists discount_rules (
 );
 insert into discount_rules(id,name) values (1,'Stok menipis') on conflict(id) do nothing;
 
+-- Idempotent upgrades for existing installations.
+alter table products add column if not exists pricing jsonb not null default '{"mode":"manual","target":0}'::jsonb;
+alter table orders add column if not exists shipping jsonb not null default '{}'::jsonb;
+alter table orders add column if not exists other_cost bigint not null default 0;
+alter table orders add column if not exists updated_at timestamptz not null default now();
+alter table store_settings add column if not exists business jsonb not null default '{}'::jsonb;
+
+update products set pricing='{"mode":"manual","target":0}'::jsonb where pricing is null;
+update orders set shipping='{}'::jsonb where shipping is null;
+update store_settings set business='{}'::jsonb where business is null;
+
 alter table products enable row level security;
 alter table store_settings enable row level security;
 alter table orders enable row level security;
@@ -84,5 +100,7 @@ alter table order_items enable row level security;
 alter table wishlist_events enable row level security;
 alter table discount_rules enable row level security;
 
+drop policy if exists "public read products" on products;
 create policy "public read products" on products for select using (is_active = true);
+drop policy if exists "public read store settings" on store_settings;
 create policy "public read store settings" on store_settings for select using (true);

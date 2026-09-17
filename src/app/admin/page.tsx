@@ -1,44 +1,443 @@
 "use client";
-import React,{useEffect,useMemo,useState} from "react";
-import { motion } from "framer-motion";
-import { BarChart3, Boxes, ChevronRight, LogOut, Package, Percent, Plus, Settings, ShoppingBag, Store, TrendingUp } from "lucide-react";
+
+import React, { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  AlertTriangle,
+  Check,
+  ChevronRight,
+  CircleDollarSign,
+  ExternalLink,
+  Image as ImageIcon,
+  Loader2,
+  LogOut,
+  Package,
+  Percent,
+  Plus,
+  RefreshCw,
+  Save,
+  Send,
+  Settings,
+  ShoppingBag,
+  Store,
+  Trash2,
+  TrendingUp,
+  Upload,
+  X,
+} from "lucide-react";
 import { formatIDR } from "@/lib/catalog";
+import { calculateBasePrice, discountedPrice, pricingSummary, type PricingMode } from "@/lib/admin-pricing";
 
-type AdminProduct={id:number;title:string;slug:string;src_url?:string;srcUrl?:string;price:number;discount:{amount:number;percentage:number};category:string;gender:string;color:string;sizes:string[];description:string;stock:number;cost_price?:number;costPrice?:number;is_active?:boolean;isActive?:boolean;rating:number;reviewCount:number;gallery?:string[];details?:Record<string,string>;faqs?:any[];reviews?:any[]};
-type Analytics={configured:boolean;revenue:number;cost:number;profit:number;orders:number;topCheckout:{id:number;title:string;count:number}[];topSaved:{id:number;title:string;count:number}[];lowStock:{id:number;title:string;stock:number}[]};
-type Settings={store_name?:string;storeName?:string;primary_color?:string;primaryColor?:string;accent_color?:string;accentColor?:string;hero_title?:string;heroTitle?:string;hero_description?:string;heroDescription?:string;hero_image_url?:string;heroImageUrl?:string};
+type Discount = { amount?: number; percentage?: number; source?: "manual" | "auto" };
+type Pricing = { mode: PricingMode; target: number };
+type Product = {
+  id: number;
+  title: string;
+  slug: string;
+  src_url?: string;
+  srcUrl?: string;
+  gallery?: string[];
+  price: number;
+  discount: Discount;
+  pricing?: Pricing;
+  rating: number;
+  review_count?: number;
+  reviewCount?: number;
+  category: string;
+  gender: string;
+  color: string;
+  sizes: string[];
+  description: string;
+  details?: Record<string, string>;
+  faqs?: any[];
+  reviews?: any[];
+  stock: number;
+  cost_price?: number;
+  costPrice?: number;
+  is_active?: boolean;
+  isActive?: boolean;
+};
 
-const input="w-full rounded-xl border border-black/10 bg-white px-4 py-3 outline-none focus:border-[#1B2A4A]";
-const card="rounded-2xl border border-black/10 bg-white";
+type Order = {
+  id: number;
+  order_code: string;
+  customer_name: string;
+  customer_email: string;
+  phone?: string;
+  address?: string;
+  payment_method: string;
+  status: string;
+  total: number;
+  cost_total: number;
+  other_cost?: number;
+  shipping?: {
+    courier?: string;
+    trackingNumber?: string;
+    shippingFee?: number;
+    shippingCost?: number;
+    note?: string;
+  };
+  created_at: string;
+  items?: any[];
+};
 
-export default function AdminPage(){
- const [session,setSession]=useState<any>(null); const [tab,setTab]=useState("dashboard"); const [products,setProducts]=useState<AdminProduct[]>([]); const [orders,setOrders]=useState<any[]>([]); const [analytics,setAnalytics]=useState<Analytics|null>(null); const [settings,setSettings]=useState<Settings>({}); const [discount,setDiscount]=useState<any>({enabled:false,stockThreshold:5,percentage:10}); const [error,setError]=useState(""); const [saving,setSaving]=useState(false); const [editing,setEditing]=useState<AdminProduct|null>(null);
- useEffect(()=>{fetch("/api/admin/session").then(r=>r.json()).then(setSession);},[]);
- const refresh=async()=>{const [p,o,a,s,d]=await Promise.all([fetch("/api/admin/products"),fetch("/api/admin/orders"),fetch("/api/admin/analytics"),fetch("/api/admin/settings"),fetch("/api/admin/discounts")]); if(p.ok)setProducts(await p.json()); if(o.ok)setOrders(await o.json()); if(a.ok)setAnalytics(await a.json()); if(s.ok)setSettings(await s.json()); if(d.ok)setDiscount(await d.json());};
- useEffect(()=>{if(session?.authenticated) refresh().catch(()=>{});},[session?.authenticated]);
- if(session===null)return <div className="min-h-screen grid place-items-center text-black/60">Memuat admin…</div>;
- if(!session.configured||!session.authenticated)return <AdminLogin configured={session.configured} onDone={()=>fetch("/api/admin/session").then(r=>r.json()).then(setSession)} />;
- const nav=[{id:"dashboard",label:"Ringkasan",icon:TrendingUp},{id:"products",label:"Produk & Stok",icon:Package},{id:"orders",label:"Pesanan",icon:ShoppingBag},{id:"discounts",label:"Diskon",icon:Percent},{id:"settings",label:"Toko & Tampilan",icon:Store}];
- const lowStock=products.filter(p=>Number(p.stock||0)<=5).sort((a,b)=>a.stock-b.stock).slice(0,7);
- const saveProduct=async(p:AdminProduct)=>{setSaving(true);setError("");try{const method=products.some(x=>x.id===p.id)?"PATCH":"POST";const r=await fetch("/api/admin/products",{method,headers:{"Content-Type":"application/json"},body:JSON.stringify(p)});const data=await r.json();if(!r.ok)throw new Error(data.error||"Gagal menyimpan produk");setEditing(null);await refresh();}catch(e){setError(e instanceof Error?e.message:"Gagal menyimpan");}finally{setSaving(false)}};
- const logout=async()=>{await fetch("/api/admin/logout",{method:"POST"});location.reload();};
- return <div className="min-h-screen bg-[#f6f3ed] text-[#1B2A4A]"><div className="flex min-h-screen">
-  <aside className="hidden w-72 shrink-0 border-r border-black/10 bg-white p-6 lg:flex lg:flex-col"><div className="mb-10"><div className="text-2xl font-black tracking-tight">MERX</div><div className="mt-1 text-xs uppercase tracking-[0.25em] text-black/40">Admin Studio</div></div><nav className="space-y-1">{nav.map(n=><button key={n.id} onClick={()=>setTab(n.id)} className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm transition ${tab===n.id?"bg-[#1B2A4A] text-white":"hover:bg-[#f5f1e9] text-black/70"}`}><n.icon size={18}/>{n.label}</button>)}</nav><div className="mt-auto border-t border-black/10 pt-5"><div className="text-xs text-black/40">Admin</div><div className="mt-1 text-sm font-medium truncate">{session.email}</div><button onClick={logout} className="mt-4 flex items-center gap-2 text-sm text-black/60 hover:text-black"><LogOut size={16}/> Keluar</button></div></aside>
-  <main className="w-full min-w-0"><div className="sticky top-0 z-20 flex items-center justify-between border-b border-black/10 bg-white/90 px-4 py-4 backdrop-blur lg:px-8"><div><div className="text-sm font-medium lg:hidden">MERX Admin Studio</div><div className="hidden text-sm text-black/50 lg:block">Kontrol toko, katalog, stok, diskon, dan performa</div></div><a href="/" className="text-sm font-medium">Lihat toko <ChevronRight size={15} className="inline"/></a></div>
-   <div className="px-4 py-6 lg:px-8 lg:py-8">{tab==="dashboard"&&<Dashboard analytics={analytics} products={products} lowStock={lowStock}/>} {tab==="products"&&<Products products={products} setEditing={setEditing} onAdd={()=>setEditing(blankProduct(products))}/>} {tab==="orders"&&<Orders orders={orders}/>} {tab==="discounts"&&<Discounts value={discount} setValue={setDiscount} onSave={async()=>{setSaving(true);await fetch("/api/admin/discounts",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(discount)});setSaving(false);}} saving={saving}/>} {tab==="settings"&&<StoreSettings value={settings} setValue={setSettings} onSave={async()=>{setSaving(true);const payload=toSettings(settings);const r=await fetch("/api/admin/settings",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});if(!r.ok)setError((await r.json()).error||"Gagal menyimpan");setSaving(false);}} saving={saving}/>}</div>
-  </main></div>{editing&&<ProductEditor product={editing} saving={saving} error={error} onClose={()=>{setEditing(null);setError("")}} onSave={saveProduct}/>} </div>
+type Analytics = {
+  configured: boolean;
+  revenue: number;
+  cost: number;
+  extraCost: number;
+  profit: number;
+  margin: number;
+  orders: number;
+  topCheckout: { id: number; title: string; count: number }[];
+  topSaved: { id: number; title: string; count: number }[];
+  lowStock: { id: number; title: string; stock: number }[];
+};
+
+type Settings = {
+  store_name?: string;
+  storeName?: string;
+  primary_color?: string;
+  primaryColor?: string;
+  accent_color?: string;
+  accentColor?: string;
+  hero_title?: string;
+  heroTitle?: string;
+  hero_description?: string;
+  heroDescription?: string;
+  hero_image_url?: string;
+  heroImageUrl?: string;
+  business?: {
+    phone?: string;
+    email?: string;
+    whatsapp?: string;
+    address?: string;
+    instagram?: string;
+    shippingNote?: string;
+  };
+};
+
+const input = "w-full rounded-xl border border-black/10 bg-white px-4 py-3 outline-none transition focus:border-[#1B2A4A] focus:ring-2 focus:ring-[#1B2A4A]/10";
+const card = "rounded-2xl border border-black/10 bg-white shadow-[0_8px_35px_rgba(27,42,74,.05)]";
+const statuses = ["paid", "processing", "packed", "ready_to_ship", "shipped", "delivered", "cancelled"];
+const couriers = ["JNE", "J&T", "SiCepat", "AnterAja", "Ninja Xpress", "Pos Indonesia", "Gojek", "Grab", "Lainnya"];
+
+export default function AdminPage() {
+  const [session, setSession] = useState<any>(null);
+  const [tab, setTab] = useState("dashboard");
+  const [products, setProducts] = useState<Product[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [analytics, setAnalytics] = useState<Analytics | null>(null);
+  const [settings, setSettings] = useState<Settings>({});
+  const [discount, setDiscount] = useState<any>({ enabled: false, stockThreshold: 5, percentage: 10 });
+  const [editing, setEditing] = useState<Product | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [toast, setToast] = useState("");
+
+  useEffect(() => {
+    fetch("/api/admin/session").then((r) => r.json()).then(setSession).catch(() => setSession({ authenticated: false, configured: false }));
+  }, []);
+
+  const flash = (message: string) => {
+    setToast(message);
+    window.setTimeout(() => setToast(""), 2600);
+  };
+
+  const refresh = async () => {
+    setLoading(true);
+    setError("");
+    const requests = await Promise.allSettled([
+      fetch("/api/admin/products").then(async (r) => ({ ok: r.ok, data: await r.json() })),
+      fetch("/api/admin/orders").then(async (r) => ({ ok: r.ok, data: await r.json() })),
+      fetch("/api/admin/analytics").then(async (r) => ({ ok: r.ok, data: await r.json() })),
+      fetch("/api/admin/settings").then(async (r) => ({ ok: r.ok, data: await r.json() })),
+      fetch("/api/admin/discounts").then(async (r) => ({ ok: r.ok, data: await r.json() })),
+    ]);
+    const messages: string[] = [];
+    const p = requests[0]; if (p.status === "fulfilled" && p.value.ok) setProducts(p.value.data); else messages.push("produk");
+    const o = requests[1]; if (o.status === "fulfilled" && o.value.ok) setOrders(o.value.data); else messages.push("pesanan");
+    const a = requests[2]; if (a.status === "fulfilled" && a.value.ok) setAnalytics(a.value.data); else messages.push("analitik");
+    const s = requests[3]; if (s.status === "fulfilled" && s.value.ok) setSettings(s.value.data); else messages.push("pengaturan");
+    const d = requests[4]; if (d.status === "fulfilled" && d.value.ok) setDiscount(d.value.data); else messages.push("diskon");
+    if (messages.length) setError(`Sebagian data gagal dimuat: ${messages.join(", ")}.`);
+    setLoading(false);
+  };
+
+  useEffect(() => { if (session?.authenticated) refresh().catch(() => setError("Gagal memuat data admin.")); }, [session?.authenticated]);
+
+  if (session === null) return <div className="min-h-screen grid place-items-center bg-[#f6f3ed] text-black/60">Memuat Admin Studio…</div>;
+  if (!session.configured || !session.authenticated) return <AdminLogin configured={session.configured} onDone={() => fetch("/api/admin/session").then(r => r.json()).then(setSession)} />;
+
+  const nav = [
+    { id: "dashboard", label: "Ringkasan", icon: TrendingUp },
+    { id: "products", label: "Produk & Stok", icon: Package },
+    { id: "orders", label: "Pesanan & Kirim", icon: ShoppingBag },
+    { id: "discounts", label: "Diskon", icon: Percent },
+    { id: "settings", label: "Toko & Tampilan", icon: Store },
+  ];
+
+  const saveProduct = async (product: Product) => {
+    setSaving(true); setError("");
+    try {
+      const exists = products.some((x) => x.id === product.id);
+      const res = await fetch("/api/admin/products", {
+        method: exists ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(product),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gagal menyimpan produk.");
+      setEditing(null);
+      await refresh();
+      flash(exists ? "Produk diperbarui." : "Produk berhasil ditambahkan.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Gagal menyimpan produk.");
+    } finally { setSaving(false); }
+  };
+
+  const deleteProduct = async (id: number) => {
+    if (!window.confirm("Hapus produk ini dari katalog?")) return;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/admin/products", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gagal menghapus produk.");
+      await refresh(); flash("Produk dihapus.");
+    } catch (e) { setError(e instanceof Error ? e.message : "Gagal menghapus produk."); }
+    finally { setSaving(false); }
+  };
+
+  const saveDiscount = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/admin/discounts", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(discount) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gagal menyimpan aturan diskon.");
+      setDiscount(data); await refresh(); flash("Aturan diskon tersimpan.");
+    } catch (e) { setError(e instanceof Error ? e.message : "Gagal menyimpan diskon."); }
+    finally { setSaving(false); }
+  };
+
+  const saveSettings = async () => {
+    setSaving(true);
+    try {
+      const b = settings.business || {};
+      const payload = {
+        storeName: settings.storeName || settings.store_name,
+        primaryColor: settings.primaryColor || settings.primary_color,
+        accentColor: settings.accentColor || settings.accent_color,
+        heroTitle: settings.heroTitle || settings.hero_title,
+        heroDescription: settings.heroDescription || settings.hero_description,
+        heroImageUrl: settings.heroImageUrl || settings.hero_image_url,
+        business: b,
+      };
+      const res = await fetch("/api/admin/settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gagal menyimpan pengaturan.");
+      setSettings(data?.[0] || data); flash("Pengaturan toko tersimpan.");
+    } catch (e) { setError(e instanceof Error ? e.message : "Gagal menyimpan pengaturan."); }
+    finally { setSaving(false); }
+  };
+
+  const updateOrder = async (id: number, patch: Partial<Order>) => {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/admin/orders", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, ...patch }) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gagal memperbarui pesanan.");
+      await refresh();
+      setSelectedOrder((current) => current ? { ...current, ...patch } : current);
+      flash("Pesanan diperbarui.");
+    } catch (e) { setError(e instanceof Error ? e.message : "Gagal memperbarui pesanan."); }
+    finally { setSaving(false); }
+  };
+
+  const logout = async () => { await fetch("/api/admin/logout", { method: "POST" }); location.reload(); };
+  const lowStock = products.filter((p) => Number(p.stock || 0) <= 5).sort((a, b) => a.stock - b.stock).slice(0, 8);
+
+  return (
+    <div className="min-h-screen bg-[#f6f3ed] text-[#1B2A4A]">
+      <div className="flex min-h-screen">
+        <aside className="hidden w-72 shrink-0 border-r border-black/10 bg-white p-6 lg:flex lg:flex-col">
+          <Brand />
+          <nav className="space-y-1">
+            {nav.map((item) => <NavButton key={item.id} active={tab === item.id} item={item} onClick={() => setTab(item.id)} />)}
+          </nav>
+          <div className="mt-auto border-t border-black/10 pt-5">
+            <div className="text-xs text-black/40">ADMIN</div>
+            <div className="mt-1 truncate text-sm font-medium">{session.email}</div>
+            <button onClick={logout} className="mt-4 inline-flex items-center gap-2 text-sm text-black/60 transition hover:text-black"><LogOut size={16} /> Keluar</button>
+          </div>
+        </aside>
+
+        <main className="w-full min-w-0">
+          <header className="sticky top-0 z-30 border-b border-black/10 bg-white/90 px-4 py-3 backdrop-blur lg:px-8">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold lg:hidden">MERX Admin Studio</div>
+                <div className="hidden text-sm text-black/50 lg:block">Kelola katalog, harga, laba, stok, pesanan, dan pengiriman.</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <AnimatedButton variant="ghost" onClick={() => refresh()} disabled={loading} title="Muat ulang data"><RefreshCw size={17} className={loading ? "animate-spin" : ""} /></AnimatedButton>
+                <a href="/" className="hidden items-center gap-1 rounded-xl px-3 py-2 text-sm font-medium transition hover:bg-[#f5f1e9] sm:inline-flex">Lihat toko <ExternalLink size={15} /></a>
+              </div>
+            </div>
+            <div className="mt-3 flex gap-2 overflow-x-auto pb-1 lg:hidden">
+              {nav.map((item) => <NavButton key={item.id} compact active={tab === item.id} item={item} onClick={() => setTab(item.id)} />)}
+            </div>
+          </header>
+
+          <div className="px-4 py-6 lg:px-8 lg:py-8">
+            <AnimatePresence>{error && <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="mb-5 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"><AlertTriangle size={18} className="mt-0.5 shrink-0" /><div className="flex-1">{error}</div><button onClick={() => setError("")}><X size={16} /></button></motion.div>}</AnimatePresence>
+
+            <AnimatePresence mode="wait">
+              {tab === "dashboard" && <motion.div key="dashboard" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}><Dashboard analytics={analytics} products={products} lowStock={lowStock} orders={orders} /></motion.div>}
+              {tab === "products" && <motion.div key="products" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}><Products products={products} onAdd={() => setEditing(blankProduct(products))} onEdit={setEditing} onDelete={deleteProduct} /></motion.div>}
+              {tab === "orders" && <motion.div key="orders" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}><Orders orders={orders} onOpen={setSelectedOrder} /></motion.div>}
+              {tab === "discounts" && <motion.div key="discounts" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}><Discounts value={discount} setValue={setDiscount} onSave={saveDiscount} saving={saving} /></motion.div>}
+              {tab === "settings" && <motion.div key="settings" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}><StoreSettings value={settings} setValue={setSettings} onSave={saveSettings} saving={saving} /></motion.div>}
+            </AnimatePresence>
+          </div>
+        </main>
+      </div>
+
+      <AnimatePresence>{editing && <ProductEditor product={editing} saving={saving} onClose={() => { setEditing(null); setError(""); }} onSave={saveProduct} />}</AnimatePresence>
+      <AnimatePresence>{selectedOrder && <OrderDrawer order={selectedOrder} saving={saving} onClose={() => setSelectedOrder(null)} onSave={updateOrder} />}</AnimatePresence>
+      <AnimatePresence>{toast && <motion.div initial={{ opacity: 0, y: 20, scale: .97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20 }} className="fixed bottom-5 left-1/2 z-[80] -translate-x-1/2 rounded-full bg-[#1B2A4A] px-5 py-3 text-sm font-medium text-white shadow-xl"><Check size={16} className="mr-2 inline" />{toast}</motion.div>}</AnimatePresence>
+    </div>
+  );
 }
-function AdminLogin({configured,onDone}:{configured:boolean;onDone:()=>void}){const [email,setEmail]=useState("");const [password,setPassword]=useState("");const [error,setError]=useState("");const submit=async(e:React.FormEvent)=>{e.preventDefault();const r=await fetch("/api/admin/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password})});const d=await r.json();if(!r.ok){setError(d.error||"Gagal masuk");return}onDone()};return <main className="min-h-screen bg-[#f6f3ed] grid place-items-center px-4"><motion.form initial={{opacity:0,y:18}} animate={{opacity:1,y:0}} onSubmit={submit} className={`${card} w-full max-w-md p-7`}><div className="text-3xl font-black text-[#1B2A4A]">MERX</div><div className="mt-1 text-sm text-black/50">Admin Studio</div>{!configured&&<div className="mt-6 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">Tambahkan MERX_ADMIN_EMAIL, MERX_ADMIN_PASSWORD, dan MERX_ADMIN_SECRET di Vercel.</div>}<label className="mt-6 block text-sm">Email admin<input className={`${input} mt-2`} value={email} onChange={e=>setEmail(e.target.value)} type="email"/></label><label className="mt-4 block text-sm">Kata sandi<input className={`${input} mt-2`} value={password} onChange={e=>setPassword(e.target.value)} type="password"/></label><button disabled={!configured} className="mt-6 h-12 w-full rounded-xl bg-[#1B2A4A] text-white disabled:opacity-40">Masuk ke Admin</button>{error&&<p className="mt-4 text-sm text-red-700">{error}</p>}</motion.form></main>}
-function Dashboard({analytics,products,lowStock}:{analytics:Analytics|null;products:AdminProduct[];lowStock:AdminProduct[]}){const revenue=analytics?.revenue||0,cost=analytics?.cost||0,profit=analytics?.profit||0;return <div><div className="mb-7 flex items-end justify-between"><div><p className="text-xs uppercase tracking-[.24em] text-black/40">Dashboard</p><h1 className="mt-2 text-3xl font-semibold lg:text-4xl">Gambaran toko</h1><p className="mt-2 text-black/55">Pantau penjualan, margin, stok, dan produk yang paling diminati.</p></div></div><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><Metric title="Pendapatan" value={formatIDR(revenue)}/><Metric title="Modal" value={formatIDR(cost)}/><Metric title="Keuntungan" value={formatIDR(profit)} positive={profit>=0}/><Metric title="Pesanan" value={String(analytics?.orders||0)}/></div><div className="mt-6 grid gap-6 xl:grid-cols-2"><Panel title="Sering checkout">{analytics?.topCheckout?.length?<ol className="space-y-3">{analytics.topCheckout.slice(0,6).map((x,i)=><li key={x.id} className="flex items-center justify-between"><span><b className="mr-3 text-black/30">{String(i+1).padStart(2,"0")}</b>{x.title}</span><span className="text-sm font-medium">{x.count} item</span></li>)}</ol>:<Empty text="Belum ada data checkout."/>}</Panel><Panel title="Sering disimpan">{analytics?.topSaved?.length?<ol className="space-y-3">{analytics.topSaved.slice(0,6).map((x,i)=><li key={x.id} className="flex items-center justify-between"><span><b className="mr-3 text-black/30">{String(i+1).padStart(2,"0")}</b>{x.title}</span><span className="text-sm font-medium">{x.count} simpan</span></li>)}</ol>:<Empty text="Belum ada data simpan."/>}</Panel></div><Panel title="Peringatan stok" className="mt-6">{lowStock.length?<div className="grid gap-3 sm:grid-cols-2">{lowStock.map(p=><div key={p.id} className="rounded-xl bg-[#f6f3ed] p-4 flex justify-between"><span className="truncate pr-4">{p.title}</span><b className={p.stock<=0?"text-red-700":"text-[#1B2A4A]"}>{p.stock} pcs</b></div>)}</div>:<Empty text="Semua stok aman."/>}</Panel></div>}
-function Products({products,setEditing,onAdd}:{products:AdminProduct[];setEditing:(p:AdminProduct)=>void;onAdd:()=>void}){const [q,setQ]=useState("");const list=useMemo(()=>products.filter(p=>p.title.toLowerCase().includes(q.toLowerCase())||p.category.toLowerCase().includes(q.toLowerCase())).slice(0,100),[products,q]);return <div><Header title="Produk & Stok" text={`${products.length} produk di database`} action={<button onClick={onAdd} className="inline-flex items-center gap-2 rounded-xl bg-[#1B2A4A] px-4 py-3 text-sm text-white"><Plus size={17}/> Produk baru</button>}/><input className={`${input} mb-5 max-w-md`} placeholder="Cari produk…" value={q} onChange={e=>setQ(e.target.value)}/><div className={`${card} overflow-hidden`}><div className="overflow-x-auto"><table className="w-full text-sm"><thead className="bg-[#faf8f4] text-left text-black/45"><tr><th className="p-4">Produk</th><th>Harga</th><th>Modal</th><th>Diskon</th><th>Stok</th><th></th></tr></thead><tbody>{list.map(p=>{const img=p.src_url||p.srcUrl||"/images/header-homepage.png";return <tr key={p.id} className="border-t border-black/5"><td className="p-4 min-w-[280px]"><div className="flex items-center gap-3"><img src={img} onError={e=>e.currentTarget.src="/images/header-homepage.png"} className="h-14 w-14 rounded-lg object-cover bg-[#f3efe7]" alt=""/><div><div className="font-medium">{p.title}</div><div className="text-xs text-black/45">{p.category} · {p.color}</div></div></div></td><td>{formatIDR(p.price)}</td><td>{formatIDR(p.cost_price??p.costPrice??0)}</td><td>{p.discount?.percentage?`${p.discount.percentage}%`:"—"}</td><td><span className={p.stock<=5?"font-semibold text-red-700":"font-medium"}>{p.stock}</span></td><td className="pr-4 text-right"><button onClick={()=>setEditing(p)} className="rounded-lg border border-black/10 px-3 py-2">Edit</button></td></tr>})}</tbody></table></div></div></div>}
-function Orders({orders}:{orders:any[]}){return <div><Header title="Pesanan" text="Pesanan terbaru dan status pembayarannya"/>{orders.length?<div className={`${card} overflow-hidden`}><div className="overflow-x-auto"><table className="w-full text-sm"><thead className="bg-[#faf8f4] text-left text-black/45"><tr><th className="p-4">Order</th><th>Customer</th><th>Pembayaran</th><th>Total</th><th>Status</th><th>Tanggal</th></tr></thead><tbody>{orders.map(o=><tr key={o.id} className="border-t border-black/5"><td className="p-4 font-medium">{o.order_code}</td><td>{o.customer_name}<div className="text-xs text-black/40">{o.customer_email}</div></td><td>{o.payment_method}</td><td>{formatIDR(o.total)}</td><td>{o.status}</td><td>{new Date(o.created_at).toLocaleDateString("id-ID")}</td></tr>)}</tbody></table></div></div>:<Empty text="Belum ada pesanan tersimpan di database."/>}</div>}
-function Discounts({value,setValue,onSave,saving}:{value:any;setValue:(x:any)=>void;onSave:()=>void;saving:boolean}){return <div><Header title="Diskon" text="Atur diskon manual dan otomatis berdasarkan stok"/><div className="grid gap-6 lg:grid-cols-2"><section className={`${card} p-6`}><h2 className="text-lg font-semibold">Diskon otomatis stok menipis</h2><p className="mt-1 text-sm text-black/50">Saat stok berada di bawah ambang, admin dapat memakai aturan ini sebagai panduan diskon.</p><label className="mt-6 flex items-center gap-3"><input type="checkbox" checked={!!value.enabled} onChange={e=>setValue({...value,enabled:e.target.checked})}/> Aktif</label><div className="mt-5 grid grid-cols-2 gap-4"><label className="text-sm">Stok ≤<input className={`${input} mt-2`} type="number" min="0" value={value.stockThreshold} onChange={e=>setValue({...value,stockThreshold:Number(e.target.value)})}/></label><label className="text-sm">Diskon %<input className={`${input} mt-2`} type="number" min="0" max="90" value={value.percentage} onChange={e=>setValue({...value,percentage:Number(e.target.value)})}/></label></div><button onClick={onSave} className="mt-6 rounded-xl bg-[#1B2A4A] px-5 py-3 text-sm text-white">{saving?"Menyimpan…":"Simpan aturan"}</button></section><section className={`${card} p-6`}><h2 className="text-lg font-semibold">Diskon per produk</h2><p className="mt-2 text-sm text-black/50">Gunakan tab Produk & Stok untuk mengubah persentase diskon setiap item. Harga jual dihitung otomatis oleh katalog.</p></section></div></div>}
-function StoreSettings({value,setValue,onSave,saving}:{value:Settings;setValue:(v:Settings)=>void;onSave:()=>void;saving:boolean}){const v=(k:keyof Settings,alt="")=>(value[k]??alt);return <div><Header title="Toko & Tampilan" text="Ubah identitas, warna, hero, dan copy toko"/><div className="grid gap-6 lg:grid-cols-[1fr_340px]"><section className={`${card} p-6 space-y-5`}><label className="block text-sm">Nama toko<input className={`${input} mt-2`} value={v("storeName",v("store_name","MERX"))} onChange={e=>setValue({...value,storeName:e.target.value})}/></label><div className="grid grid-cols-2 gap-4"><label className="text-sm">Warna utama<input className="mt-2 h-12 w-full rounded-xl border border-black/10 bg-white p-1" type="color" value={v("primaryColor",v("primary_color","#1B2A4A"))} onChange={e=>setValue({...value,primaryColor:e.target.value})}/></label><label className="text-sm">Warna latar<input className="mt-2 h-12 w-full rounded-xl border border-black/10 bg-white p-1" type="color" value={v("accentColor",v("accent_color","#F3EFE7"))} onChange={e=>setValue({...value,accentColor:e.target.value})}/></label></div><label className="block text-sm">Judul hero<textarea className={`${input} mt-2 min-h-24`} value={v("heroTitle",v("hero_title",""))} onChange={e=>setValue({...value,heroTitle:e.target.value})}/></label><label className="block text-sm">Deskripsi hero<textarea className={`${input} mt-2 min-h-28`} value={v("heroDescription",v("hero_description",""))} onChange={e=>setValue({...value,heroDescription:e.target.value})}/></label><label className="block text-sm">URL gambar hero<input className={`${input} mt-2`} value={v("heroImageUrl",v("hero_image_url",""))} onChange={e=>setValue({...value,heroImageUrl:e.target.value})}/></label><button onClick={onSave} className="rounded-xl bg-[#1B2A4A] px-5 py-3 text-sm text-white">{saving?"Menyimpan…":"Simpan perubahan"}</button></section><section className={`${card} p-6`}><div className="text-xs uppercase tracking-[.2em] text-black/40">Pratinjau</div><div className="mt-5 rounded-2xl p-6" style={{background:v("accentColor",v("accent_color","#F3EFE7"))}}><div className="text-xl font-black" style={{color:v("primaryColor",v("primary_color","#1B2A4A"))}}>{v("storeName",v("store_name","MERX"))}</div><div className="mt-8 text-3xl font-semibold" style={{color:v("primaryColor",v("primary_color","#1B2A4A"))}}>{v("heroTitle")}</div><p className="mt-3 text-sm text-black/55">{v("heroDescription")}</p></div></section></div></div>}
-function ProductEditor({product,saving,error,onClose,onSave}:{product:AdminProduct;saving:boolean;error:string;onClose:()=>void;onSave:(p:AdminProduct)=>void}){const [p,setP]=useState(product);return <div className="fixed inset-0 z-50 bg-black/45 p-3 sm:p-6"><div className="mx-auto flex h-full max-w-5xl flex-col overflow-hidden rounded-3xl bg-white"><div className="flex items-center justify-between border-b border-black/10 px-5 py-4"><div><div className="font-semibold">{product.title?"Edit produk":"Tambah produk"}</div><div className="text-xs text-black/45">Perubahan disimpan ke database</div></div><button onClick={onClose} className="text-black/50">Tutup</button></div><div className="flex-1 overflow-y-auto p-5"><div className="grid gap-5 md:grid-cols-2"><Field label="Nama" value={p.title} onChange={v=>setP({...p,title:v})}/><Field label="Slug" value={p.slug} onChange={v=>setP({...p,slug:v})}/><Field label="Harga" value={String(p.price)} type="number" onChange={v=>setP({...p,price:Number(v)})}/><Field label="Modal" value={String(p.cost_price??p.costPrice??0)} type="number" onChange={v=>setP({...p,cost_price:Number(v)})}/><Field label="Stok" value={String(p.stock??0)} type="number" onChange={v=>setP({...p,stock:Number(v)})}/><Field label="Diskon %" value={String(p.discount?.percentage??0)} type="number" onChange={v=>setP({...p,discount:{amount:0,percentage:Number(v)}})}/><Field label="Kategori" value={p.category} onChange={v=>setP({...p,category:v})}/><Field label="Warna" value={p.color} onChange={v=>setP({...p,color:v})}/><Field label="URL gambar" value={p.src_url||p.srcUrl||""} onChange={v=>setP({...p,srcUrl:v,src_url:v})}/><Field label="Gender" value={p.gender} onChange={v=>setP({...p,gender:v})}/></div><label className="mt-5 block text-sm">Deskripsi<textarea className={`${input} mt-2 min-h-36`} value={p.description||""} onChange={e=>setP({...p,description:e.target.value})}/></label><label className="mt-5 block text-sm">Ukuran <input className={`${input} mt-2`} value={(p.sizes||[]).join(", ")} onChange={e=>setP({...p,sizes:e.target.value.split(",").map(x=>x.trim()).filter(Boolean)})}/></label>{error&&<p className="mt-4 text-sm text-red-700">{error}</p>}</div><div className="border-t border-black/10 p-5 flex justify-end gap-3"><button onClick={onClose} className="rounded-xl border border-black/10 px-5 py-3">Batal</button><button onClick={()=>onSave({...p,id:p.id||Date.now()})} className="rounded-xl bg-[#1B2A4A] px-5 py-3 text-white">{saving?"Menyimpan…":"Simpan produk"}</button></div></div></div>}
-function Field({label,value,onChange,type="text"}:{label:string;value:string;onChange:(v:string)=>void;type?:string}){return <label className="text-sm">{label}<input className={`${input} mt-2`} type={type} value={value} onChange={e=>onChange(e.target.value)}/></label>}
-function Metric({title,value,positive}:{title:string;value:string;positive?:boolean}){return <div className={`${card} p-5`}><div className="text-xs uppercase tracking-[.18em] text-black/40">{title}</div><div className={`mt-3 text-2xl font-semibold ${positive===false?"text-red-700":""}`}>{value}</div></div>}
-function Panel({title,children,className=""}:{title:string;children:React.ReactNode;className?:string}){return <section className={`${card} p-6 ${className}`}><h2 className="text-lg font-semibold mb-5">{title}</h2>{children}</section>}
-function Empty({text}:{text:string}){return <div className="rounded-xl bg-[#f6f3ed] p-5 text-sm text-black/50">{text}</div>}
-function Header({title,text,action}:{title:string;text:string;action?:React.ReactNode}){return <div className="mb-6 flex items-end justify-between gap-4"><div><p className="text-xs uppercase tracking-[.24em] text-black/40">MERX ADMIN</p><h1 className="mt-2 text-3xl font-semibold">{title}</h1><p className="mt-2 text-sm text-black/55">{text}</p></div>{action}</div>}
-function blankProduct(products:AdminProduct[]):AdminProduct{return {id:Math.max(0,...products.map(p=>p.id))+1,title:"",slug:"",srcUrl:"/images/header-homepage.png",src_url:"/images/header-homepage.png",price:0,discount:{amount:0,percentage:0},rating:0,reviewCount:0,category:"T-Shirts",gender:"Unisex",color:"White",sizes:["S","M","L"],description:"",stock:0,cost_price:0,isActive:true};}
-function toSettings(v:Settings){return {storeName:v.storeName||v.store_name,primaryColor:v.primaryColor||v.primary_color,accentColor:v.accentColor||v.accent_color,heroTitle:v.heroTitle||v.hero_title,heroDescription:v.heroDescription||v.hero_description,heroImageUrl:v.heroImageUrl||v.hero_image_url};}
+
+function Brand() { return <div className="mb-10"><div className="text-2xl font-black tracking-tight">MERX</div><div className="mt-1 text-xs uppercase tracking-[0.25em] text-black/40">Admin Studio</div></div>; }
+function NavButton({ item, active, onClick, compact = false }: any) { const Icon = item.icon; return <motion.button whileHover={{ x: 2 }} whileTap={{ scale: .98 }} onClick={onClick} className={`flex shrink-0 items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition ${compact ? "bg-white border border-black/10" : "w-full px-4 py-3"} ${active ? "bg-[#1B2A4A] text-white" : "text-black/65 hover:bg-[#f5f1e9]"}`}><Icon size={17} />{item.label}</motion.button>; }
+function AnimatedButton({ children, variant = "primary", className = "", ...props }: any) { return <motion.button whileHover={{ scale: 1.015 }} whileTap={{ scale: .97 }} transition={{ type: "spring", stiffness: 420, damping: 22 }} className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-medium transition ${variant === "primary" ? "bg-[#1B2A4A] text-white shadow-sm hover:bg-[#16233e]" : variant === "danger" ? "border border-red-200 bg-white text-red-700 hover:bg-red-50" : "border border-black/10 bg-white text-[#1B2A4A] hover:bg-[#f7f4ed]"} ${className}`} {...props}>{children}</motion.button>; }
+
+function AdminLogin({ configured, onDone }: { configured: boolean; onDone: () => void }) {
+  const [email, setEmail] = useState(""); const [password, setPassword] = useState(""); const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
+  const submit = async (e: React.FormEvent) => { e.preventDefault(); setBusy(true); setError(""); try { const r = await fetch("/api/admin/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password }) }); const d = await r.json(); if (!r.ok) throw new Error(d.error || "Gagal masuk."); onDone(); } catch (e) { setError(e instanceof Error ? e.message : "Gagal masuk."); } finally { setBusy(false); } };
+  return <main className="min-h-screen bg-[#f6f3ed] grid place-items-center px-4"><motion.form initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .35 }} onSubmit={submit} className={`${card} w-full max-w-md p-7`}><div className="text-3xl font-black">MERX</div><div className="mt-1 text-sm text-black/50">Admin Studio</div>{!configured && <div className="mt-6 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">Credential admin belum dikonfigurasi di Vercel.</div>}<label className="mt-6 block text-sm">Email<input required type="email" className={`${input} mt-2`} value={email} onChange={e => setEmail(e.target.value)} /></label><label className="mt-4 block text-sm">Kata sandi<input required type="password" className={`${input} mt-2`} value={password} onChange={e => setPassword(e.target.value)} /></label><AnimatedButton type="submit" disabled={!configured || busy} className="mt-6 h-12 w-full">{busy ? <Loader2 size={17} className="animate-spin" /> : null}{busy ? "Memeriksa…" : "Masuk ke Admin"}</AnimatedButton>{error && <p className="mt-4 text-sm text-red-700">{error}</p>}</motion.form></main>;
+}
+
+function Dashboard({ analytics, products, lowStock, orders }: { analytics: Analytics | null; products: Product[]; lowStock: Product[]; orders: Order[] }) {
+  const awaiting = orders.filter(o => ["paid", "processing", "packed", "ready_to_ship"].includes(o.status)).length;
+  const revenue = analytics?.revenue || 0, cost = analytics?.cost || 0, profit = analytics?.profit || 0;
+  return <div>
+    <PageHeader eyebrow="DASHBOARD" title="Kontrol toko" text="Lihat penjualan, modal, laba, stok, dan alur pesanan dalam satu tempat." />
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <Metric title="Pendapatan" value={formatIDR(revenue)} icon={<CircleDollarSign size={18} />} />
+      <Metric title="Modal barang" value={formatIDR(cost)} icon={<Package size={18} />} />
+      <Metric title="Laba estimasi" value={formatIDR(profit)} icon={<TrendingUp size={18} />} positive={profit >= 0} />
+      <Metric title="Margin" value={`${(analytics?.margin || 0).toFixed(1)}%`} icon={<Percent size={18} />} />
+      <Metric title="Perlu diproses" value={String(awaiting)} icon={<Send size={18} />} />
+    </div>
+    <div className="mt-6 grid gap-6 xl:grid-cols-2">
+      <Panel title="Produk paling banyak checkout">{analytics?.topCheckout?.length ? <ol className="space-y-3">{analytics.topCheckout.slice(0, 8).map((x, i) => <motion.li layout key={x.id} className="flex items-center justify-between border-b border-black/5 pb-3 last:border-0"><span><b className="mr-3 text-black/25">{String(i + 1).padStart(2, "0")}</b>{x.title}</span><span className="text-sm font-medium">{x.count} item</span></motion.li>)}</ol> : <Empty text="Belum ada checkout." />}</Panel>
+      <Panel title="Produk yang sering disimpan">{analytics?.topSaved?.length ? <ol className="space-y-3">{analytics.topSaved.slice(0, 8).map((x, i) => <motion.li layout key={x.id} className="flex items-center justify-between border-b border-black/5 pb-3 last:border-0"><span><b className="mr-3 text-black/25">{String(i + 1).padStart(2, "0")}</b>{x.title}</span><span className="text-sm font-medium">{x.count} simpan</span></motion.li>)}</ol> : <Empty text="Belum ada data simpan." />}</Panel>
+    </div>
+    <Panel title="Peringatan stok" className="mt-6">{lowStock.length ? <div className="grid gap-3 sm:grid-cols-2">{lowStock.map(p => <div key={p.id} className="flex items-center justify-between rounded-xl bg-[#f6f3ed] p-4"><span className="truncate pr-4">{p.title}</span><b className={p.stock <= 0 ? "text-red-700" : "text-[#1B2A4A]"}>{p.stock} pcs</b></div>)}</div> : <Empty text="Semua stok di atas batas aman." />}</Panel>
+    <p className="mt-4 text-xs text-black/40">Jumlah produk aktif: {products.filter(p => p.is_active !== false && p.isActive !== false).length} · Total order tersimpan: {orders.length}</p>
+  </div>;
+}
+
+function Products({ products, onAdd, onEdit, onDelete }: { products: Product[]; onAdd: () => void; onEdit: (p: Product) => void; onDelete: (id: number) => void }) {
+  const [q, setQ] = useState(""); const [status, setStatus] = useState("all");
+  const list = useMemo(() => products.filter(p => { const h = `${p.title} ${p.category} ${p.color} ${p.gender}`.toLowerCase(); return h.includes(q.toLowerCase()) && (status === "all" || (status === "active" ? p.is_active !== false && p.isActive !== false : p.is_active === false || p.isActive === false)); }).slice(0, 200), [products, q, status]);
+  return <div><PageHeader eyebrow="KATALOG" title="Produk & stok" text={`${products.length} produk tersedia di database.`} action={<AnimatedButton onClick={onAdd}><Plus size={17} /> Produk baru</AnimatedButton>} />
+    <div className="mb-5 flex flex-col gap-3 md:flex-row"><input className={input + " max-w-xl"} placeholder="Cari nama, kategori, warna…" value={q} onChange={e => setQ(e.target.value)} /><select className={input + " md:w-44"} value={status} onChange={e => setStatus(e.target.value)}><option value="all">Semua status</option><option value="active">Aktif</option><option value="inactive">Nonaktif</option></select></div>
+    <div className={`${card} overflow-hidden`}><div className="overflow-x-auto"><table className="w-full text-sm"><thead className="bg-[#faf8f4] text-left text-black/45"><tr><th className="p-4">Produk</th><th>Harga</th><th>Modal</th><th>Harga promo</th><th>Laba</th><th>Stok</th><th>Status</th><th></th></tr></thead><tbody><AnimatePresence initial={false}>{list.map((p) => { const img = p.src_url || p.srcUrl || p.gallery?.[0] || "/images/header-homepage.png"; const c = Number(p.cost_price ?? p.costPrice ?? 0); const fp = discountedPrice(Number(p.price || 0), p.discount); const profit = fp - c; return <motion.tr layout key={p.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="border-t border-black/5 align-middle"><td className="min-w-[320px] p-4"><div className="flex items-center gap-3"><img src={img} onError={e => { e.currentTarget.src = "/images/header-homepage.png"; }} className="h-14 w-14 rounded-xl object-cover bg-[#f3efe7]" alt="" /><div><div className="font-medium">{p.title}</div><div className="mt-1 text-xs text-black/45">{p.category} · {p.color} · {p.sizes?.join("/")}</div></div></div></td><td>{formatIDR(p.price)}</td><td>{formatIDR(c)}</td><td>{formatIDR(fp)}{Number(p.discount?.percentage || 0) > 0 && <span className="ml-1 text-xs text-red-700">-{p.discount.percentage}%</span>}</td><td className={profit >= 0 ? "font-medium" : "font-medium text-red-700"}>{formatIDR(profit)}</td><td><span className={p.stock <= 5 ? "font-semibold text-red-700" : "font-medium"}>{p.stock}</span></td><td><span className={`rounded-full px-2.5 py-1 text-xs ${p.is_active === false || p.isActive === false ? "bg-black/5 text-black/45" : "bg-emerald-50 text-emerald-700"}`}>{p.is_active === false || p.isActive === false ? "Nonaktif" : "Aktif"}</span></td><td className="pr-4"><div className="flex justify-end gap-2"><AnimatedButton variant="ghost" className="px-3 py-2" onClick={() => onEdit(p)}>Edit</AnimatedButton><AnimatedButton variant="danger" className="px-3 py-2" onClick={() => onDelete(p.id)}><Trash2 size={15} /></AnimatedButton></div></td></motion.tr>; })}</AnimatePresence></tbody></table></div></div>
+  </div>;
+}
+
+function Orders({ orders, onOpen }: { orders: Order[]; onOpen: (o: Order) => void }) {
+  const [filter, setFilter] = useState("all");
+  const filtered = orders.filter(o => filter === "all" || o.status === filter);
+  return <div><PageHeader eyebrow="FULFILLMENT" title="Pesanan & pengiriman" text="Ubah status pesanan, atur kurir, masukkan resi, dan tandai siap kirim." />
+    <div className="mb-5 flex gap-2 overflow-x-auto">{["all", ...statuses].map(s => <button key={s} onClick={() => setFilter(s)} className={`shrink-0 rounded-full border px-3 py-2 text-xs transition ${filter === s ? "border-[#1B2A4A] bg-[#1B2A4A] text-white" : "border-black/10 bg-white text-black/55 hover:bg-[#f7f4ed]"}`}>{s === "all" ? "Semua" : statusLabel(s)}</button>)}</div>
+    <div className={`${card} overflow-hidden`}><div className="overflow-x-auto"><table className="w-full text-sm"><thead className="bg-[#faf8f4] text-left text-black/45"><tr><th className="p-4">Order</th><th>Pelanggan</th><th>Total</th><th>Status</th><th>Kurir / Resi</th><th>Tanggal</th><th></th></tr></thead><tbody>{filtered.map(o => <motion.tr layout key={o.id} className="border-t border-black/5"><td className="p-4 font-semibold">{o.order_code}</td><td>{o.customer_name}<div className="text-xs text-black/40">{o.customer_email}</div></td><td>{formatIDR(o.total)}</td><td><StatusBadge status={o.status} /></td><td><div>{o.shipping?.courier || "Belum dipilih"}</div><div className="text-xs text-black/40">{o.shipping?.trackingNumber || "Tanpa resi"}</div></td><td className="whitespace-nowrap">{new Date(o.created_at).toLocaleDateString("id-ID")}</td><td className="pr-4 text-right"><AnimatedButton variant="ghost" className="px-3 py-2" onClick={() => onOpen(o)}>Kelola <ChevronRight size={15} /></AnimatedButton></td></motion.tr>)}</tbody></table></div>{!filtered.length && <div className="p-8"><Empty text="Belum ada pesanan pada status ini." /></div>}</div>
+  </div>;
+}
+
+function OrderDrawer({ order, saving, onClose, onSave }: { order: Order; saving: boolean; onClose: () => void; onSave: (id: number, patch: Partial<Order>) => void }) {
+  const [status, setStatus] = useState(order.status); const [courier, setCourier] = useState(order.shipping?.courier || ""); const [tracking, setTracking] = useState(order.shipping?.trackingNumber || ""); const [shippingFee, setShippingFee] = useState(Number(order.shipping?.shippingFee || 0)); const [shippingCost, setShippingCost] = useState(Number(order.shipping?.shippingCost || 0)); const [otherCost, setOtherCost] = useState(Number(order.other_cost || 0)); const [note, setNote] = useState(order.shipping?.note || "");
+  const profit = Number(order.total || 0) + shippingFee - Number(order.cost_total || 0) - shippingCost - otherCost;
+  const markReady = () => { setStatus("ready_to_ship"); onSave(order.id, { status: "ready_to_ship", shipping: { courier, trackingNumber: tracking, shippingFee, shippingCost, note } as any, other_cost: otherCost }); };
+  const save = () => onSave(order.id, { status, shipping: { courier, trackingNumber: tracking, shippingFee, shippingCost, note } as any, other_cost: otherCost });
+  return <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] bg-black/40 p-3 sm:p-6" onMouseDown={onClose}><motion.div initial={{ x: 60, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 60, opacity: 0 }} transition={{ type: "spring", stiffness: 320, damping: 28 }} className="ml-auto flex h-full w-full max-w-xl flex-col overflow-hidden rounded-3xl bg-white" onMouseDown={e => e.stopPropagation()}>
+    <div className="flex items-center justify-between border-b border-black/10 px-5 py-4"><div><div className="font-semibold">{order.order_code}</div><div className="text-xs text-black/45">Kelola fulfillment dan biaya order</div></div><button onClick={onClose} className="rounded-lg p-2 transition hover:bg-black/5"><X size={18} /></button></div>
+    <div className="flex-1 overflow-y-auto p-5 space-y-6">
+      <section className={`${card} p-5`}><div className="mb-4 flex items-center justify-between"><h3 className="font-semibold">Status pesanan</h3><StatusBadge status={status} /></div><select className={input} value={status} onChange={e => setStatus(e.target.value)}>{statuses.map(s => <option key={s} value={s}>{statusLabel(s)}</option>)}</select><div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">{["paid", "processing", "packed", "ready_to_ship"].map(s => <button key={s} onClick={() => setStatus(s)} className={`rounded-xl border px-3 py-2 text-xs transition ${status === s ? "border-[#1B2A4A] bg-[#1B2A4A] text-white" : "border-black/10 hover:bg-[#f7f4ed]"}`}>{statusLabel(s)}</button>)}</div></section>
+      <section className={`${card} p-5`}><h3 className="font-semibold">Pelanggan & alamat</h3><div className="mt-4 text-sm"><b>{order.customer_name}</b><div className="mt-1 text-black/55">{order.customer_email}</div>{order.phone && <div className="mt-1 text-black/55">{order.phone}</div>}<div className="mt-3 rounded-xl bg-[#f6f3ed] p-4 leading-6">{order.address || "Alamat belum tersedia."}</div></div></section>
+      <section className={`${card} p-5`}><h3 className="font-semibold">Siap kirim ke kurir</h3><div className="mt-4 grid gap-4 sm:grid-cols-2"><label className="text-sm">Kurir<select className={`${input} mt-2`} value={courier} onChange={e => setCourier(e.target.value)}><option value="">Pilih kurir</option>{couriers.map(c => <option key={c}>{c}</option>)}</select></label><label className="text-sm">Nomor resi<input className={`${input} mt-2`} value={tracking} onChange={e => setTracking(e.target.value)} placeholder="Masukkan resi" /></label><label className="text-sm">Ongkir dibayar customer<input className={`${input} mt-2`} type="number" min="0" value={shippingFee} onChange={e => setShippingFee(Number(e.target.value))} /></label><label className="text-sm">Biaya kirim toko<input className={`${input} mt-2`} type="number" min="0" value={shippingCost} onChange={e => setShippingCost(Number(e.target.value))} /></label></div><label className="mt-4 block text-sm">Catatan pengiriman<textarea className={`${input} mt-2 min-h-24`} value={note} onChange={e => setNote(e.target.value)} placeholder="Contoh: fragile / jangan dibalik" /></label><div className="mt-4 rounded-xl bg-[#f6f3ed] p-4 text-sm">Tombol <b>Siap kirim</b> hanya mengubah status order dan menyimpan data kurir/resi. Pengiriman fisik tetap dilakukan lewat akun kurir kamu.</div></section>
+      <section className={`${card} p-5`}><h3 className="font-semibold">Perhitungan laba order</h3><div className="mt-4 grid grid-cols-2 gap-3 text-sm"><div className="rounded-xl bg-[#f6f3ed] p-4"><div className="text-black/45">Nilai diterima</div><b>{formatIDR(Number(order.total || 0) + shippingFee)}</b></div><div className="rounded-xl bg-[#f6f3ed] p-4"><div className="text-black/45">Modal barang</div><b>{formatIDR(order.cost_total)}</b></div><label className="rounded-xl bg-[#f6f3ed] p-4 text-sm"><div className="text-black/45">Biaya lain</div><input className="mt-2 w-full bg-transparent outline-none" type="number" min="0" value={otherCost} onChange={e => setOtherCost(Number(e.target.value))} /></label><div className="rounded-xl border border-black/10 p-4"><div className="text-black/45">Laba estimasi</div><b className={profit >= 0 ? "text-emerald-700" : "text-red-700"}>{formatIDR(profit)}</b></div></div></section>
+      <section className={`${card} p-5`}><h3 className="font-semibold">Isi order</h3><div className="mt-3 space-y-3">{(order.items || []).map(item => <div key={item.id} className="flex items-center justify-between rounded-xl border border-black/5 p-3"><div><div className="font-medium">{item.title}</div><div className="text-xs text-black/45">{item.quantity} × {formatIDR(item.unit_price)}</div></div><b>{formatIDR(Number(item.quantity || 0) * Number(item.unit_price || 0))}</b></div>)}</div></section>
+    </div>
+    <div className="flex flex-wrap justify-end gap-2 border-t border-black/10 p-5"><AnimatedButton variant="ghost" onClick={onClose}>Tutup</AnimatedButton><AnimatedButton variant="ghost" onClick={() => window.print()}><ExternalLink size={16} /> Cetak</AnimatedButton><AnimatedButton variant="ghost" onClick={save} disabled={saving}>{saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Simpan</AnimatedButton><AnimatedButton onClick={markReady} disabled={saving}><Send size={16} /> Siap kirim</AnimatedButton></div>
+  </motion.div></motion.div>;
+}
+
+function Discounts({ value, setValue, onSave, saving }: { value: any; setValue: (v: any) => void; onSave: () => void; saving: boolean }) { return <div><PageHeader eyebrow="PROMOSI" title="Diskon & harga promo" text="Atur diskon manual per produk atau otomatis berdasarkan stok menipis." /><div className="grid gap-6 lg:grid-cols-2"><section className={`${card} p-6`}><div className="flex items-start justify-between"><div><h2 className="text-lg font-semibold">Diskon otomatis stok menipis</h2><p className="mt-1 text-sm text-black/50">Produk dengan stok di bawah ambang akan mendapat diskon otomatis. Diskon manual tidak ditimpa.</p></div><Percent size={20} className="text-black/30" /></div><label className="mt-6 flex items-center gap-3 text-sm"><input type="checkbox" checked={!!value.enabled} onChange={e => setValue({ ...value, enabled: e.target.checked })} /> Aktifkan aturan otomatis</label><div className="mt-5 grid grid-cols-2 gap-4"><label className="text-sm">Stok ≤<input className={`${input} mt-2`} type="number" min="0" value={value.stockThreshold ?? 5} onChange={e => setValue({ ...value, stockThreshold: Number(e.target.value) })} /></label><label className="text-sm">Diskon %<input className={`${input} mt-2`} type="number" min="0" max="90" value={value.percentage ?? 10} onChange={e => setValue({ ...value, percentage: Number(e.target.value) })} /></label></div><AnimatedButton className="mt-6" onClick={onSave} disabled={saving}>{saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Simpan aturan</AnimatedButton></section><section className={`${card} p-6`}><h2 className="text-lg font-semibold">Diskon per produk</h2><p className="mt-2 text-sm text-black/50">Buka Produk & Stok → Edit. Di sana kamu bisa memilih diskon persen atau nominal, dan langsung melihat harga promo serta laba setelah diskon.</p><div className="mt-6 rounded-2xl bg-[#f6f3ed] p-5"><div className="text-xs uppercase tracking-[.18em] text-black/40">Contoh</div><div className="mt-3 text-sm">Harga Rp 200.000 · Modal Rp 110.000 · Diskon 10%</div><div className="mt-2 font-semibold">Harga promo Rp 180.000 · Laba Rp 70.000</div></div></section></div></div>; }
+
+function StoreSettings({ value, setValue, onSave, saving }: { value: Settings; setValue: (v: Settings) => void; onSave: () => void; saving: boolean }) { const get = (k: keyof Settings, fallback = "") => value[k] ?? fallback; const b = value.business || {}; return <div><PageHeader eyebrow="STORE" title="Toko & tampilan" text="Atur identitas toko, warna, hero, dan informasi yang dibutuhkan pelanggan." /><div className="grid gap-6 lg:grid-cols-[1fr_340px]"><section className={`${card} p-6 space-y-5`}><label className="block text-sm">Nama toko<input className={`${input} mt-2`} value={get("storeName", get("store_name", "MERX")) as string} onChange={e => setValue({ ...value, storeName: e.target.value })} /></label><div className="grid grid-cols-2 gap-4"><label className="text-sm">Warna utama<input className="mt-2 h-12 w-full rounded-xl border border-black/10 bg-white p-1" type="color" value={get("primaryColor", get("primary_color", "#1B2A4A")) as string} onChange={e => setValue({ ...value, primaryColor: e.target.value })} /></label><label className="text-sm">Warna latar<input className="mt-2 h-12 w-full rounded-xl border border-black/10 bg-white p-1" type="color" value={get("accentColor", get("accent_color", "#F3EFE7")) as string} onChange={e => setValue({ ...value, accentColor: e.target.value })} /></label></div><label className="block text-sm">Judul hero<textarea className={`${input} mt-2 min-h-24`} value={get("heroTitle", get("hero_title", "")) as string} onChange={e => setValue({ ...value, heroTitle: e.target.value })} /></label><label className="block text-sm">Deskripsi hero<textarea className={`${input} mt-2 min-h-24`} value={get("heroDescription", get("hero_description", "")) as string} onChange={e => setValue({ ...value, heroDescription: e.target.value })} /></label><label className="block text-sm">URL gambar hero<input className={`${input} mt-2`} value={get("heroImageUrl", get("hero_image_url", "")) as string} onChange={e => setValue({ ...value, heroImageUrl: e.target.value })} /></label><div className="border-t border-black/10 pt-5"><div className="font-semibold">Kontak & pengiriman</div><div className="mt-4 grid gap-4 sm:grid-cols-2"><Field label="Telepon" value={b.phone || ""} onChange={v => setValue({ ...value, business: { ...b, phone: v } })} /><Field label="Email toko" value={b.email || ""} onChange={v => setValue({ ...value, business: { ...b, email: v } })} /><Field label="WhatsApp" value={b.whatsapp || ""} onChange={v => setValue({ ...value, business: { ...b, whatsapp: v } })} /><Field label="Instagram" value={b.instagram || ""} onChange={v => setValue({ ...value, business: { ...b, instagram: v } })} /></div><label className="mt-4 block text-sm">Alamat toko<textarea className={`${input} mt-2 min-h-24`} value={b.address || ""} onChange={e => setValue({ ...value, business: { ...b, address: e.target.value } })} /></label><label className="mt-4 block text-sm">Catatan pengiriman<textarea className={`${input} mt-2 min-h-24`} value={b.shippingNote || ""} onChange={e => setValue({ ...value, business: { ...b, shippingNote: e.target.value } })} /></label></div><AnimatedButton onClick={onSave} disabled={saving}>{saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Simpan perubahan</AnimatedButton></section><section className={`${card} p-6`}><div className="flex items-center gap-2 text-xs uppercase tracking-[.2em] text-black/40"><Store size={15} /> Pratinjau</div><div className="mt-5 rounded-2xl p-6" style={{ background: (get("accentColor", get("accent_color", "#F3EFE7")) as string) }}><div className="text-xl font-black" style={{ color: (get("primaryColor", get("primary_color", "#1B2A4A")) as string) }}>{get("storeName", get("store_name", "MERX")) as string}</div><div className="mt-8 text-3xl font-semibold" style={{ color: (get("primaryColor", get("primary_color", "#1B2A4A")) as string) }}>{get("heroTitle") as string}</div><p className="mt-3 text-sm text-black/55">{get("heroDescription") as string}</p></div></section></div></div>; }
+
+function ProductEditor({ product, saving, onClose, onSave }: { product: Product; saving: boolean; onClose: () => void; onSave: (p: Product) => void }) {
+  const initialPricing = product.pricing || { mode: "manual" as PricingMode, target: 0 };
+  const [p, setP] = useState<Product>({ ...product, pricing: initialPricing, gallery: product.gallery?.length ? product.gallery : [product.src_url || product.srcUrl || ""] });
+  const cost = Number(p.cost_price ?? p.costPrice ?? 0);
+  const rule = p.pricing || { mode: "manual" as PricingMode, target: 0 };
+  const calculatedPrice = calculateBasePrice(cost, rule, Number(p.price || 0));
+  const summary = pricingSummary(cost, calculatedPrice, p.discount);
+  const set = (patch: Partial<Product>) => setP({ ...p, ...patch });
+  const setPricing = (patch: Partial<Pricing>) => setP({ ...p, pricing: { ...rule, ...patch } });
+  const gallery = (p.gallery || []).filter(Boolean);
+  const parseDetails = () => Object.fromEntries((detailsText || "").split("\n").map(line => line.split(":")).filter(parts => parts.length >= 2).map(([k, ...rest]) => [k.trim(), rest.join(":").trim()]).filter(([k]) => k));
+  // Keep a simple text representation for editing existing JSON specs.
+  const detailsText = (p as any).detailsText ?? Object.entries(p.details || {}).map(([k, v]) => `${k}: ${v}`).join("\n");
+  const setDetailsText = (value: string) => setP({ ...p, ...( { detailsText: value } as any) });
+
+  const uploadImage = async (file: File) => {
+    const form = new FormData(); form.append("file", file);
+    const res = await fetch("/api/admin/upload-image", { method: "POST", body: form }); const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Gagal upload gambar.");
+    setP(current => ({ ...current, srcUrl: data.url, src_url: data.url, gallery: Array.from(new Set([...(current.gallery || []), data.url])).slice(0, 12) }));
+  };
+
+  const save = () => {
+    const price = calculateBasePrice(cost, rule, Number(p.price || 0));
+    onSave({ ...p, price, cost_price: cost, srcUrl: gallery[0] || p.srcUrl || p.src_url || "", src_url: gallery[0] || p.srcUrl || p.src_url || "", gallery, details: parseDetails() });
+  };
+
+  return <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[55] bg-black/45 p-3 sm:p-6"><motion.div initial={{ y: 30, opacity: 0, scale: .98 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: 20, opacity: 0 }} transition={{ duration: .22 }} className="mx-auto flex h-full max-w-6xl flex-col overflow-hidden rounded-3xl bg-white">
+    <div className="flex items-center justify-between border-b border-black/10 px-5 py-4"><div><div className="font-semibold">{product.title ? "Edit produk" : "Tambah produk"}</div><div className="text-xs text-black/45">Harga, modal, diskon, stok, dan gambar tersimpan ke database.</div></div><button onClick={onClose} className="rounded-lg p-2 transition hover:bg-black/5"><X size={18} /></button></div>
+    <div className="flex-1 overflow-y-auto p-5"><div className="grid gap-6 xl:grid-cols-[1fr_360px]">
+      <div className="space-y-5">
+        <section className={`${card} p-5`}><div className="flex items-center justify-between"><div><h3 className="font-semibold">Informasi produk</h3><p className="mt-1 text-sm text-black/45">Semua field inti katalog bisa diubah dari sini.</p></div><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={p.is_active !== false && p.isActive !== false} onChange={e => set({ isActive: e.target.checked, is_active: e.target.checked })} /> Aktif</label></div><div className="mt-5 grid gap-4 md:grid-cols-2"><Field label="Nama produk" value={p.title} onChange={v => set({ title: v })} /><Field label="Slug" value={p.slug} onChange={v => set({ slug: v })} /><Field label="Kategori" value={p.category} onChange={v => set({ category: v })} /><Field label="Gender" value={p.gender} onChange={v => set({ gender: v })} /><Field label="Warna" value={p.color} onChange={v => set({ color: v })} /><Field label="Ukuran (pisahkan koma)" value={(p.sizes || []).join(", ")} onChange={v => set({ sizes: v.split(",").map(x => x.trim()).filter(Boolean) })} /></div><label className="mt-4 block text-sm">Deskripsi<textarea className={`${input} mt-2 min-h-36`} value={p.description || ""} onChange={e => set({ description: e.target.value })} /></label><label className="mt-4 block text-sm">Detail / spesifikasi<textarea className={`${input} mt-2 min-h-32`} value={detailsText} onChange={e => setDetailsText(e.target.value)} placeholder="Bahan: Cotton\nFit: Regular\nPerawatan: Machine wash" /></label></section>
+
+        <section className={`${card} p-5`}><div className="flex items-start justify-between gap-4"><div><h3 className="font-semibold">Harga, modal, dan laba</h3><p className="mt-1 text-sm text-black/45">Pilih harga manual atau biarkan harga dihitung dari modal + target keuntungan.</p></div><CircleDollarSign size={20} className="text-black/30" /></div><div className="mt-5 grid gap-4 md:grid-cols-2"><Field label="Modal / cost" value={String(cost)} type="number" onChange={v => set({ cost_price: Number(v), costPrice: Number(v) })} /><label className="text-sm">Mode harga<select className={`${input} mt-2`} value={rule.mode} onChange={e => setPricing({ mode: e.target.value as PricingMode })}><option value="manual">Harga manual</option><option value="profit">Target laba nominal</option><option value="markup">Markup dari modal (%)</option><option value="margin">Target margin dari harga (%)</option></select></label>{rule.mode === "manual" ? <Field label="Harga jual" value={String(p.price || 0)} type="number" onChange={v => set({ price: Number(v) })} /> : <Field label={rule.mode === "profit" ? "Target laba (Rp)" : "Target (%)"} value={String(rule.target)} type="number" onChange={v => setPricing({ target: Number(v) })} />}</div><div className="mt-5 grid gap-3 sm:grid-cols-3"><SummaryTile label="Harga dasar" value={formatIDR(calculatedPrice)} /><SummaryTile label="Harga promo" value={formatIDR(summary.finalPrice)} /><SummaryTile label="Laba setelah diskon" value={formatIDR(summary.profit)} positive={summary.profit >= 0} /></div><div className="mt-4 rounded-xl bg-[#f6f3ed] p-4 text-sm">Margin setelah diskon: <b>{summary.margin.toFixed(1)}%</b>. Harga promo dan laba berubah otomatis saat modal, target, atau diskon diubah.</div></section>
+
+        <section className={`${card} p-5`}><div className="flex items-center justify-between"><div><h3 className="font-semibold">Diskon produk</h3><p className="mt-1 text-sm text-black/45">Diskon manual akan dianggap lebih prioritas daripada diskon otomatis stok.</p></div><Percent size={20} className="text-black/30" /></div><div className="mt-5 grid gap-4 md:grid-cols-3"><label className="text-sm">Jenis<select className={`${input} mt-2`} value={Number(p.discount?.percentage || 0) > 0 ? "percentage" : Number(p.discount?.amount || 0) > 0 ? "amount" : "none"} onChange={e => { const type = e.target.value; set({ discount: type === "percentage" ? { amount: 0, percentage: p.discount?.percentage || 10, source: "manual" } : type === "amount" ? { amount: p.discount?.amount || 10000, percentage: 0, source: "manual" } : { amount: 0, percentage: 0, source: "manual" } }); }}><option value="none">Tanpa diskon</option><option value="percentage">Persentase</option><option value="amount">Nominal</option></select></label><Field label="Nilai %" value={String(p.discount?.percentage || 0)} type="number" onChange={v => set({ discount: { amount: 0, percentage: Math.max(0, Math.min(90, Number(v))), source: "manual" } })} /><Field label="Nominal Rp" value={String(p.discount?.amount || 0)} type="number" onChange={v => set({ discount: { amount: Math.max(0, Number(v)), percentage: 0, source: "manual" } })} /></div></section>
+
+        <section className={`${card} p-5`}><h3 className="font-semibold">Stok</h3><div className="mt-4 grid gap-4 md:grid-cols-2"><Field label="Jumlah stok" value={String(p.stock || 0)} type="number" onChange={v => set({ stock: Math.max(0, Number(v)) })} /><Field label="ID produk" value={String(p.id)} onChange={() => {}} /></div></section>
+      </div>
+      <div className="space-y-5">
+        <section className={`${card} p-5`}><div className="flex items-center justify-between"><div><h3 className="font-semibold">Gambar produk</h3><p className="mt-1 text-xs text-black/45">Bisa upload gambar langsung ke Supabase Storage atau pakai URL.</p></div><ImageIcon size={19} className="text-black/30" /></div><div className="mt-4 overflow-hidden rounded-2xl bg-[#f3efe7]"><img src={gallery[0] || "/images/header-homepage.png"} onError={e => { e.currentTarget.src = "/images/header-homepage.png"; }} className="aspect-square w-full object-cover" alt={p.title} /></div><label className="mt-4 flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-black/15 bg-[#faf8f4] px-4 py-3 text-sm transition hover:border-black/25 hover:bg-[#f5f1e9]"><Upload size={16} /> Upload gambar utama<input className="hidden" type="file" accept="image/*" onChange={async e => { const file = e.target.files?.[0]; if (!file) return; try { await uploadImage(file); } catch (err) { alert(err instanceof Error ? err.message : "Upload gagal"); } }} /></label><label className="mt-4 block text-sm">URL gambar utama<input className={`${input} mt-2`} value={gallery[0] || ""} onChange={e => setP({ ...p, srcUrl: e.target.value, src_url: e.target.value, gallery: [e.target.value, ...gallery.slice(1)] })} /></label><label className="mt-4 block text-sm">Gallery tambahan<textarea className={`${input} mt-2 min-h-28`} value={gallery.slice(1).join("\n")} onChange={e => setP({ ...p, gallery: Array.from(new Set([gallery[0], ...e.target.value.split("\n").map(x => x.trim()).filter(Boolean)])) })} placeholder="Satu URL per baris" /></label></section>
+        <section className={`${card} p-5`}><h3 className="font-semibold">Ringkasan produk</h3><div className="mt-4 space-y-3 text-sm"><Row label="Harga dasar" value={formatIDR(calculatedPrice)} /><Row label="Harga promo" value={formatIDR(summary.finalPrice)} /><Row label="Modal" value={formatIDR(cost)} /><Row label="Laba" value={formatIDR(summary.profit)} strong /><Row label="Margin" value={`${summary.margin.toFixed(1)}%`} strong /></div></section>
+      </div>
+    </div></div>
+    <div className="flex justify-end gap-2 border-t border-black/10 p-5"><AnimatedButton variant="ghost" onClick={onClose}>Batal</AnimatedButton><AnimatedButton onClick={save} disabled={saving}>{saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} {saving ? "Menyimpan…" : "Simpan produk"}</AnimatedButton></div>
+  </motion.div></motion.div>;
+}
+
+function PageHeader({ eyebrow, title, text, action }: { eyebrow: string; title: string; text: string; action?: React.ReactNode }) { return <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs uppercase tracking-[.24em] text-black/35">{eyebrow}</p><h1 className="mt-2 text-3xl font-semibold tracking-tight lg:text-4xl">{title}</h1><p className="mt-2 max-w-3xl text-sm text-black/55">{text}</p></div>{action}</div>; }
+function Metric({ title, value, icon, positive }: { title: string; value: string; icon: React.ReactNode; positive?: boolean }) { return <motion.div whileHover={{ y: -2 }} transition={{ type: "spring", stiffness: 300 }} className={`${card} p-5`}><div className="flex items-center justify-between text-black/40"><div className="text-xs uppercase tracking-[.14em]">{title}</div>{icon}</div><div className={`mt-3 text-2xl font-semibold ${positive === false ? "text-red-700" : ""}`}>{value}</div></motion.div>; }
+function Panel({ title, children, className = "" }: { title: string; children: React.ReactNode; className?: string }) { return <section className={`${card} p-6 ${className}`}><h2 className="mb-5 text-lg font-semibold">{title}</h2>{children}</section>; }
+function Empty({ text }: { text: string }) { return <div className="rounded-xl bg-[#f6f3ed] p-5 text-sm text-black/50">{text}</div>; }
+function Field({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (v: string) => void; type?: string }) { return <label className="text-sm">{label}<input className={`${input} mt-2`} type={type} value={value} onChange={e => onChange(e.target.value)} /></label>; }
+function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) { return <div className="flex items-center justify-between border-b border-black/5 pb-3 last:border-0"><span className="text-black/50">{label}</span><b className={strong ? "text-[#1B2A4A]" : ""}>{value}</b></div>; }
+function SummaryTile({ label, value, positive = true }: { label: string; value: string; positive?: boolean }) { return <div className="rounded-xl border border-black/10 p-4"><div className="text-xs text-black/45">{label}</div><div className={`mt-1 font-semibold ${positive ? "text-[#1B2A4A]" : "text-red-700"}`}>{value}</div></div>; }
+function StatusBadge({ status }: { status: string }) { const classes: Record<string, string> = { ready_to_ship: "bg-amber-50 text-amber-700", shipped: "bg-blue-50 text-blue-700", delivered: "bg-emerald-50 text-emerald-700", cancelled: "bg-red-50 text-red-700" }; return <span className={`rounded-full px-2.5 py-1 text-xs ${classes[status] || "bg-black/5 text-black/55"}`}>{statusLabel(status)}</span>; }
+function statusLabel(status: string) { return ({ paid: "Dibayar", processing: "Diproses", packed: "Dikemas", ready_to_ship: "Siap kirim", shipped: "Dikirim", delivered: "Selesai", cancelled: "Dibatalkan" } as Record<string, string>)[status] || status; }
+function blankProduct(products: Product[]): Product { return { id: Math.max(0, ...products.map(p => p.id)) + 1, title: "", slug: "", srcUrl: "/images/header-homepage.png", src_url: "/images/header-homepage.png", gallery: ["/images/header-homepage.png"], price: 0, discount: { amount: 0, percentage: 0, source: "manual" }, pricing: { mode: "manual", target: 0 }, rating: 0, category: "T-Shirts", gender: "Unisex", color: "White", sizes: ["S", "M", "L"], description: "", details: {}, faqs: [], reviews: [], stock: 0, cost_price: 0, is_active: true, isActive: true };
+}

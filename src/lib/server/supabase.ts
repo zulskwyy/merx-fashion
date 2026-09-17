@@ -3,7 +3,6 @@ import { products } from "@/data/products";
 
 const url = process.env.SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
 export const dbConfigured = Boolean(url && key);
 
 export async function supabaseRequest<T = unknown>(path: string, init: RequestInit = {}) {
@@ -14,13 +13,14 @@ export async function supabaseRequest<T = unknown>(path: string, init: RequestIn
   headers.set("Content-Type", "application/json");
   return fetch(`${url}/rest/v1/${path}`, { ...init, headers, cache: "no-store" }).then(async (r) => {
     const text = await r.text();
-    const data = text ? JSON.parse(text) : null;
+    let data: any = null;
+    try { data = text ? JSON.parse(text) : null; } catch { data = text; }
     if (!r.ok) throw new Error(data?.message || data?.error || `Database error ${r.status}`);
     return data as T;
   });
 }
 
-export type AdminProduct = Product & { stock: number; costPrice: number; isActive: boolean };
+export type AdminProduct = Product & { stock: number; costPrice: number; isActive: boolean; pricing?: { mode: string; target: number } };
 export type StoreSettings = {
   id: number;
   storeName: string;
@@ -29,20 +29,17 @@ export type StoreSettings = {
   heroTitle: string;
   heroDescription: string;
   heroImageUrl: string;
+  business?: { phone?: string; email?: string; whatsapp?: string; address?: string; instagram?: string; shippingNote?: string };
   updatedAt?: string;
 };
 
-
 export async function ensureProductsSeeded() {
   if (!dbConfigured) return false;
-
-  const existing = await supabaseRequest<Array<{ id: number }>>(
-    "products?select=id&limit=500"
-  );
-
-  if ((existing?.length ?? 0) >= products.length) return false;
-
-  const rows = products.map((p) => ({
+  const existing = await supabaseRequest<Array<{ id: number }>>("products?select=id&limit=500");
+  const existingIds = new Set((existing || []).map((row) => Number(row.id)));
+  const missing = products.filter((p) => !existingIds.has(p.id));
+  if (!missing.length) return false;
+  const rows = missing.map((p) => ({
     id: p.id,
     title: p.title,
     slug: p.slug,
@@ -50,6 +47,7 @@ export async function ensureProductsSeeded() {
     gallery: p.gallery,
     price: p.price,
     discount: p.discount,
+    pricing: { mode: "manual", target: 0 },
     rating: p.rating,
     review_count: p.reviewCount,
     category: p.category,
@@ -68,14 +66,10 @@ export async function ensureProductsSeeded() {
     is_active: true,
     updated_at: new Date().toISOString(),
   }));
-
   await supabaseRequest("products", {
     method: "POST",
-    headers: {
-      Prefer: "resolution=merge-duplicates,return=minimal",
-    },
+    headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
     body: JSON.stringify(rows),
   });
-
   return true;
 }

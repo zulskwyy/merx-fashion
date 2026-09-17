@@ -32,7 +32,7 @@ Versi ini menambahkan `/admin` untuk mengelola produk, stok, harga, modal, disko
 
 ### Database production
 
-Gunakan Supabase/Postgres. Jalankan `supabase/schema.sql` pada SQL Editor database. Setelah itu seed 50 produk awal dengan:
+Gunakan Supabase/Postgres. Jalankan `supabase/schema.sql` pada SQL Editor database. Untuk database MERX yang sudah pernah dibuat sebelumnya, jalankan juga `supabase/admin-upgrade.sql` agar kolom pricing, data bisnis, dan fulfillment order tersedia. Setelah itu seed 50 produk awal dengan:
 
 `npm run db:seed`
 
@@ -55,4 +55,4 @@ Jangan pernah menaruh service role key atau password admin di source code atau `
 
 ### Admin
 
-Buka `/admin`, masuk memakai credential admin dari environment. Admin memiliki dashboard pendapatan, modal, keuntungan, jumlah order, rekomendasi berdasarkan checkout dan simpan, peringatan stok rendah, editor produk, aturan diskon stok, daftar pesanan, dan pengaturan toko.
+Buka `/admin`, masuk memakai credential admin dari environment. Admin memiliki dashboard pendapatan, modal, laba estimasi, margin, jumlah order yang perlu diproses, editor produk lengkap (gambar, gallery, deskripsi, stok, modal, harga, target laba/markup/margin, diskon), aturan diskon otomatis, fulfillment order dengan kurir + resi + status siap kirim, dan pengaturan identitas toko. Upload gambar admin otomatis menggunakan Supabase Storage bucket `product-images`.
