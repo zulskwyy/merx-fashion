@@ -392,7 +392,7 @@ function ProductEditor({ product, saving, onClose, onSave }: { product: Product;
   const set = (patch: Partial<Product>) => setP({ ...p, ...patch });
   const setPricing = (patch: Partial<Pricing>) => setP({ ...p, pricing: { ...rule, ...patch } });
   const gallery = (p.gallery || []).filter(Boolean);
-  const parseDetails = () => Object.fromEntries((detailsText || "").split("\n").map(line => line.split(":")).filter(parts => parts.length >= 2).map(([k, ...rest]) => [k.trim(), rest.join(":").trim()]).filter(([k]) => k));
+  const parseDetails = () => Object.fromEntries((detailsText || "").split("\n").map((line: string) => line.split(":")).filter(parts => parts.length >= 2).map(([k, ...rest]) => [k.trim(), rest.join(":").trim()]).filter(([k]) => k));
   // Keep a simple text representation for editing existing JSON specs.
   const detailsText = (p as any).detailsText ?? Object.entries(p.details || {}).map(([k, v]) => `${k}: ${v}`).join("\n");
   const setDetailsText = (value: string) => setP({ ...p, ...( { detailsText: value } as any) });
