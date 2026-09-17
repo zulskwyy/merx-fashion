@@ -32,8 +32,9 @@ export async function PATCH(req: Request) {
     for (const p of ps || []) {
       const current = p.discount || { amount: 0, percentage: 0 };
       const isAuto = current.source === "auto";
+      const hasManualDiscount = !isAuto && (Number(current.amount || 0) > 0 || Number(current.percentage || 0) > 0);
       const shouldAuto = row.enabled && Number(p.stock) <= row.stock_threshold;
-      if (shouldAuto) {
+      if (shouldAuto && !hasManualDiscount) {
         await supabaseRequest(`products?id=eq.${p.id}`, {
           method: "PATCH",
           headers: { Prefer: "return=minimal" },

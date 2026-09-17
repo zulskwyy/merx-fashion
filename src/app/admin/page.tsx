@@ -392,9 +392,9 @@ function ProductEditor({ product, saving, onClose, onSave }: { product: Product;
   const set = (patch: Partial<Product>) => setP({ ...p, ...patch });
   const setPricing = (patch: Partial<Pricing>) => setP({ ...p, pricing: { ...rule, ...patch } });
   const gallery = (p.gallery || []).filter(Boolean);
-  const parseDetails = () => Object.fromEntries((detailsText || "").split("\n").map((line: string) => line.split(":")).filter(parts => parts.length >= 2).map(([k, ...rest]) => [k.trim(), rest.join(":").trim()]).filter(([k]) => k));
+  const parseDetails = () => Object.fromEntries((detailsText || "").split("\n").map((line: string) => line.split(":")).filter((parts: string[]) => parts.length >= 2).map(([k, ...rest]: string[]) => [k.trim(), rest.join(":").trim()]).filter(([k]: string[]) => Boolean(k)));
   // Keep a simple text representation for editing existing JSON specs.
-  const detailsText = (p as any).detailsText ?? Object.entries(p.details || {}).map(([k, v]) => `${k}: ${v}`).join("\n");
+  const detailsText: string = typeof (p as any).detailsText === "string" ? (p as any).detailsText : Object.entries(p.details || {}).map(([k, v]) => `${k}: ${v}`).join("\n");
   const setDetailsText = (value: string) => setP({ ...p, ...( { detailsText: value } as any) });
 
   const uploadImage = async (file: File) => {
