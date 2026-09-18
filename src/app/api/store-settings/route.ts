@@ -1,4 +1,0 @@
-import { NextResponse } from "next/server";
-import { dbConfigured, supabaseRequest, StoreSettings } from "@/lib/server/supabase";
-const fallback: StoreSettings = { id: 1, storeName: "MERX", primaryColor: "#1B2A4A", accentColor: "#F3EFE7", heroTitle: "Gaya yang tetap relevan, dibuat untuk dikenakan lama", heroDescription: "Koleksi terpilih untuk kamu yang mengutamakan kualitas, kenyamanan, dan gaya yang tidak berlebihan.", heroImageUrl: "/images/header-homepage.png" };
-export async function GET() { if (!dbConfigured) return NextResponse.json(fallback); try { const rows = await supabaseRequest<any[]>("store_settings?select=*&id=eq.1&limit=1"); const r=rows?.[0]; if(!r) return NextResponse.json(fallback); return NextResponse.json({...fallback,...r}); } catch { return NextResponse.json(fallback); } }

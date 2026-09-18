@@ -1,5 +1,0 @@
-"use client";
-import {useEffect,useState} from "react";
-export type PublicSettings={storeName:string;primaryColor:string;accentColor:string;heroTitle:string;heroDescription:string;heroImageUrl:string};
-const fallback:PublicSettings={storeName:"MERX",primaryColor:"#1B2A4A",accentColor:"#F3EFE7",heroTitle:"Gaya yang tetap relevan, dibuat untuk dikenakan lama",heroDescription:"Koleksi terpilih untuk kamu yang mengutamakan kualitas, kenyamanan, dan gaya yang tidak berlebihan.",heroImageUrl:"/images/header-homepage.png"};
-export function useStoreSettings(){const [settings,setSettings]=useState<PublicSettings>(fallback);useEffect(()=>{fetch('/api/store-settings').then(r=>r.json()).then(v=>setSettings({...fallback,...v,storeName:v.storeName||v.store_name||fallback.storeName,primaryColor:v.primaryColor||v.primary_color||fallback.primaryColor,accentColor:v.accentColor||v.accent_color||fallback.accentColor,heroTitle:v.heroTitle||v.hero_title||fallback.heroTitle,heroDescription:v.heroDescription||v.hero_description||fallback.heroDescription,heroImageUrl:v.heroImageUrl||v.hero_image_url||fallback.heroImageUrl})).catch(()=>{})},[]);return settings;}

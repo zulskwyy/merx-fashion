@@ -23,6 +23,7 @@ import {
   Trash2,
   TrendingUp,
   Upload,
+  WalletCards,
   X,
 } from "lucide-react";
 import { formatIDR } from "@/lib/catalog";
@@ -94,6 +95,23 @@ type Analytics = {
   lowStock: { id: number; title: string; stock: number }[];
 };
 
+type WalletTransaction = {
+  id: number;
+  direction: "credit" | "debit";
+  transaction_type: string;
+  amount: number;
+  method?: string | null;
+  destination?: string | null;
+  note?: string | null;
+  created_at: string;
+};
+
+type WalletData = {
+  configured: boolean;
+  balance: number;
+  transactions: WalletTransaction[];
+};
+
 type Settings = {
   store_name?: string;
   storeName?: string;
@@ -130,6 +148,7 @@ export default function AdminPage() {
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [settings, setSettings] = useState<Settings>({});
   const [discount, setDiscount] = useState<any>({ enabled: false, stockThreshold: 5, percentage: 10 });
+  const [wallet, setWallet] = useState<WalletData | null>(null);
   const [editing, setEditing] = useState<Product | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(false);
@@ -155,6 +174,7 @@ export default function AdminPage() {
       fetch("/api/admin/analytics").then(async (r) => ({ ok: r.ok, data: await r.json() })),
       fetch("/api/admin/settings").then(async (r) => ({ ok: r.ok, data: await r.json() })),
       fetch("/api/admin/discounts").then(async (r) => ({ ok: r.ok, data: await r.json() })),
+      fetch("/api/admin/wallet").then(async (r) => ({ ok: r.ok, data: await r.json() })),
     ]);
     const messages: string[] = [];
     const p = requests[0]; if (p.status === "fulfilled" && p.value.ok) setProducts(p.value.data); else messages.push("produk");
@@ -162,6 +182,7 @@ export default function AdminPage() {
     const a = requests[2]; if (a.status === "fulfilled" && a.value.ok) setAnalytics(a.value.data); else messages.push("analitik");
     const s = requests[3]; if (s.status === "fulfilled" && s.value.ok) setSettings(s.value.data); else messages.push("pengaturan");
     const d = requests[4]; if (d.status === "fulfilled" && d.value.ok) setDiscount(d.value.data); else messages.push("diskon");
+    const w = requests[5]; if (w.status === "fulfilled" && w.value.ok) setWallet(w.value.data); else messages.push("saldo");
     if (messages.length) setError(`Sebagian data gagal dimuat: ${messages.join(", ")}.`);
     setLoading(false);
   };
@@ -177,6 +198,7 @@ export default function AdminPage() {
     { id: "orders", label: "Pesanan & Kirim", icon: ShoppingBag },
     { id: "discounts", label: "Diskon", icon: Percent },
     { id: "settings", label: "Toko & Tampilan", icon: Store },
+    { id: "wallet", label: "Keuangan & Saldo", icon: WalletCards },
   ];
 
   const saveProduct = async (product: Product) => {
@@ -294,11 +316,12 @@ export default function AdminPage() {
             <AnimatePresence>{error && <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="mb-5 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"><AlertTriangle size={18} className="mt-0.5 shrink-0" /><div className="flex-1">{error}</div><button onClick={() => setError("")}><X size={16} /></button></motion.div>}</AnimatePresence>
 
             <AnimatePresence mode="wait">
-              {tab === "dashboard" && <motion.div key="dashboard" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}><Dashboard analytics={analytics} products={products} lowStock={lowStock} orders={orders} /></motion.div>}
+              {tab === "dashboard" && <motion.div key="dashboard" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}><Dashboard analytics={analytics} products={products} lowStock={lowStock} orders={orders} walletBalance={wallet?.balance || 0} /></motion.div>}
               {tab === "products" && <motion.div key="products" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}><Products products={products} onAdd={() => setEditing(blankProduct(products))} onEdit={setEditing} onDelete={deleteProduct} /></motion.div>}
               {tab === "orders" && <motion.div key="orders" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}><Orders orders={orders} onOpen={setSelectedOrder} /></motion.div>}
               {tab === "discounts" && <motion.div key="discounts" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}><Discounts value={discount} setValue={setDiscount} onSave={saveDiscount} saving={saving} /></motion.div>}
               {tab === "settings" && <motion.div key="settings" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}><StoreSettings value={settings} setValue={setSettings} onSave={saveSettings} saving={saving} /></motion.div>}
+              {tab === "wallet" && <motion.div key="wallet" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}><Wallet /></motion.div>}
             </AnimatePresence>
           </div>
         </main>
@@ -321,12 +344,13 @@ function AdminLogin({ configured, onDone }: { configured: boolean; onDone: () =>
   return <main className="min-h-screen bg-[#f6f3ed] grid place-items-center px-4"><motion.form initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .35 }} onSubmit={submit} className={`${card} w-full max-w-md p-7`}><div className="text-3xl font-black">MERX</div><div className="mt-1 text-sm text-black/50">Admin Studio</div>{!configured && <div className="mt-6 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">Credential admin belum dikonfigurasi di Vercel.</div>}<label className="mt-6 block text-sm">Email<input required type="email" className={`${input} mt-2`} value={email} onChange={e => setEmail(e.target.value)} /></label><label className="mt-4 block text-sm">Kata sandi<input required type="password" className={`${input} mt-2`} value={password} onChange={e => setPassword(e.target.value)} /></label><AnimatedButton type="submit" disabled={!configured || busy} className="mt-6 h-12 w-full">{busy ? <Loader2 size={17} className="animate-spin" /> : null}{busy ? "Memeriksa…" : "Masuk ke Admin"}</AnimatedButton>{error && <p className="mt-4 text-sm text-red-700">{error}</p>}</motion.form></main>;
 }
 
-function Dashboard({ analytics, products, lowStock, orders }: { analytics: Analytics | null; products: Product[]; lowStock: Product[]; orders: Order[] }) {
+function Dashboard({ analytics, products, lowStock, orders, walletBalance }: { analytics: Analytics | null; products: Product[]; lowStock: Product[]; orders: Order[]; walletBalance: number }) {
   const awaiting = orders.filter(o => ["paid", "processing", "packed", "ready_to_ship"].includes(o.status)).length;
   const revenue = analytics?.revenue || 0, cost = analytics?.cost || 0, profit = analytics?.profit || 0;
   return <div>
     <PageHeader eyebrow="DASHBOARD" title="Kontrol toko" text="Lihat penjualan, modal, laba, stok, dan alur pesanan dalam satu tempat." />
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+      <Metric title="Saldo tersedia" value={formatIDR(walletBalance)} icon={<WalletCards size={18} />} />
       <Metric title="Pendapatan" value={formatIDR(revenue)} icon={<CircleDollarSign size={18} />} />
       <Metric title="Modal barang" value={formatIDR(cost)} icon={<Package size={18} />} />
       <Metric title="Laba estimasi" value={formatIDR(profit)} icon={<TrendingUp size={18} />} positive={profit >= 0} />
@@ -339,6 +363,82 @@ function Dashboard({ analytics, products, lowStock, orders }: { analytics: Analy
     </div>
     <Panel title="Peringatan stok" className="mt-6">{lowStock.length ? <div className="grid gap-3 sm:grid-cols-2">{lowStock.map(p => <div key={p.id} className="flex items-center justify-between rounded-xl bg-[#f6f3ed] p-4"><span className="truncate pr-4">{p.title}</span><b className={p.stock <= 0 ? "text-red-700" : "text-[#1B2A4A]"}>{p.stock} pcs</b></div>)}</div> : <Empty text="Semua stok di atas batas aman." />}</Panel>
     <p className="mt-4 text-xs text-black/40">Jumlah produk aktif: {products.filter(p => p.is_active !== false && p.isActive !== false).length} · Total order tersimpan: {orders.length}</p>
+  </div>;
+}
+
+function Wallet() {
+  const [data, setData] = useState<WalletData>({ configured: false, balance: 0, transactions: [] });
+  const [amount, setAmount] = useState("");
+  const [method, setMethod] = useState("bank");
+  const [destination, setDestination] = useState("");
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const load = async () => {
+    const res = await fetch("/api/admin/wallet");
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || "Gagal memuat saldo.");
+    setData(json);
+  };
+
+  useEffect(() => { load().catch((e) => setError(e instanceof Error ? e.message : "Gagal memuat saldo.")); }, []);
+
+  const withdraw = async (full = false) => {
+    setBusy(true);
+    setError("");
+    try {
+      const value = full ? data.balance : Math.max(0, Math.round(Number(amount || 0)));
+      if (!value) throw new Error("Saldo yang ditarik harus lebih dari 0.");
+      const res = await fetch("/api/admin/wallet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: value, method, destination, note }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Penarikan gagal.");
+      setAmount("");
+      await load();
+      setError("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Penarikan gagal.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const credits = data.transactions.filter((x) => x.direction === "credit").reduce((sum, x) => sum + Number(x.amount || 0), 0);
+  const withdrawals = data.transactions.filter((x) => x.direction === "debit").reduce((sum, x) => sum + Number(x.amount || 0), 0);
+
+  return <div>
+    <PageHeader eyebrow="KEUANGAN" title="Saldo & penarikan" text="Pembayaran yang sudah berstatus dibayar masuk otomatis ke saldo MERX. Saat dana ditarik, saldo internal langsung berkurang sesuai nominal penarikan." action={<AnimatedButton variant="ghost" onClick={() => load().catch((e) => setError(e instanceof Error ? e.message : "Gagal memuat saldo."))}><RefreshCw size={16} /> Refresh</AnimatedButton>} />
+    {error && <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>}
+    <div className="grid gap-4 sm:grid-cols-3">
+      <Metric title="Saldo tersedia" value={formatIDR(data.balance)} icon={<WalletCards size={18} />} />
+      <Metric title="Pembayaran masuk" value={formatIDR(credits)} icon={<CircleDollarSign size={18} />} />
+      <Metric title="Total ditarik" value={formatIDR(withdrawals)} icon={<Send size={18} />} />
+    </div>
+    <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.2fr]">
+      <section className={`${card} p-6`}>
+        <h2 className="text-lg font-semibold">Tarik saldo</h2>
+        <p className="mt-2 text-sm text-black/50">Gunakan setelah dana benar-benar kamu pindahkan ke bank, e-wallet, kas, atau tujuan lain. Sistem ini mencatat mutasi saldo internal MERX.</p>
+        <label className="mt-5 block text-sm">Jumlah penarikan<input className={`${input} mt-2`} type="number" min="1" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder={`Maks. ${data.balance}`} /></label>
+        <label className="mt-4 block text-sm">Media<select className={`${input} mt-2`} value={method} onChange={(e) => setMethod(e.target.value)}><option value="bank">Bank</option><option value="ewallet">E-Wallet</option><option value="cash">Kas / tunai</option><option value="other">Lainnya</option></select></label>
+        <label className="mt-4 block text-sm">Tujuan<input className={`${input} mt-2`} value={destination} onChange={(e) => setDestination(e.target.value)} placeholder="Contoh: BCA ****1234 / DANA 08xx" /></label>
+        <label className="mt-4 block text-sm">Catatan<textarea className={`${input} mt-2 min-h-24`} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Keterangan penarikan" /></label>
+        <div className="mt-5 flex flex-wrap gap-2">
+          <AnimatedButton onClick={() => withdraw(false)} disabled={busy || !data.balance}>{busy ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />} Tarik saldo</AnimatedButton>
+          <AnimatedButton variant="ghost" onClick={() => withdraw(true)} disabled={busy || !data.balance}>Tarik semua {formatIDR(data.balance)}</AnimatedButton>
+        </div>
+      </section>
+      <section className={`${card} p-6`}>
+        <h2 className="text-lg font-semibold">Riwayat mutasi</h2>
+        <div className="mt-4 space-y-2">
+          {!data.transactions.length && <Empty text="Belum ada mutasi saldo." />}
+          {data.transactions.map((tx) => <div key={tx.id} className="flex items-center justify-between gap-4 rounded-xl border border-black/5 px-4 py-3"><div className="min-w-0"><div className="font-medium">{tx.transaction_type === "sale" ? "Pembayaran order" : tx.transaction_type === "withdrawal" ? "Penarikan saldo" : tx.transaction_type}</div><div className="truncate text-xs text-black/45">{tx.method || ""}{tx.destination ? ` · ${tx.destination}` : ""} · {new Date(tx.created_at).toLocaleString("id-ID")}</div>{tx.note && <div className="mt-1 text-xs text-black/45">{tx.note}</div>}</div><b className={tx.direction === "credit" ? "text-emerald-700" : "text-red-700"}>{tx.direction === "credit" ? "+" : "-"}{formatIDR(tx.amount)}</b></div>)}
+        </div>
+      </section>
+    </div>
   </div>;
 }
 

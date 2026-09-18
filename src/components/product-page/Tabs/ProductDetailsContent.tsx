@@ -1,2 +1,0 @@
-"use client";import React from "react";import ProductDetails from "./ProductDetails";import {Product} from "@/types/product.types";import {useI18n} from "@/lib/i18n";
-export default function ProductDetailsContent({product}:{product:Product}){const {t}=useI18n();return <section><h3 className="text-xl sm:text-2xl font-bold mb-3">{t("productDetails")}</h3><p className="text-sm sm:text-base text-black/60 mb-5">{t("sourceNote")}</p><ProductDetails details={product.details}/></section>}
