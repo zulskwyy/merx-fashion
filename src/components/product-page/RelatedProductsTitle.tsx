@@ -1,0 +1,1 @@
+"use client";import ProductListSec from "@/components/common/ProductListSec";import {Product} from "@/types/product.types";import {useI18n} from "@/lib/i18n";export default function RelatedProductsTitle({data}:{data:Product[]}){const {t}=useI18n();return <ProductListSec title={t("youMayLike")} data={data}/>}

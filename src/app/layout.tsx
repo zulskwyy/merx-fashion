@@ -1,8 +1,19 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import "@/styles/globals.css";
+import { satoshi } from "@/styles/fonts";
+import TopBanner from "@/components/layout/Banner/TopBanner";
+import TopNavbar from "@/components/layout/Navbar/TopNavbar";
+import Footer from "@/components/layout/Footer";
+import HolyLoader from "holy-loader";
+import Providers from "./providers";
 
 export const metadata: Metadata = {
-  title: "MERX",
-  description: "MERX Fashion",
+  title: "MERX — Timeless Fashion",
+  description: "MERX. Curated fashion for those who value quality over trend.",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#000000",
 };
 
 export default function RootLayout({
@@ -12,7 +23,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id">
-      <body>{children}</body>
+      <body className={satoshi.className}>
+        <HolyLoader color="#8A8072" />
+        <Providers>
+          <TopBanner />
+          <TopNavbar />
+          {children}
+          <Footer />
+        </Providers>
+      </body>
     </html>
   );
 }
