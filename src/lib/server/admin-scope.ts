@@ -1,4 +1,5 @@
 import { getAdminContext, isDemoAdmin, getDemoWorkspaceId } from "@/lib/server/admin-auth";
+export { isDemoAdmin, getDemoWorkspaceId };
 
 export function adminTable(table: string) {
   return isDemoAdmin() ? `demo_${table}` : table;

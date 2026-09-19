@@ -143,7 +143,7 @@ export async function POST() {
     }
 
     const credits = (createdOrders || []).reduce((sum: number, o: any) => sum + Number(o.total || 0), 0);
-    const walletRow = await supabaseRequest<any[]>("demo_wallets", {
+    const walletRow = await supabaseRequest<any[]>("demo_store_wallets", {
       method: "POST",
       headers: { Prefer: "return=representation" },
       body: JSON.stringify({ workspace_id: workspaceId, balance: credits, updated_at: now }),
