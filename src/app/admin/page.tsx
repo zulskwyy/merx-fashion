@@ -316,13 +316,14 @@ export default function AdminPage() {
             {nav.map((item) => <NavButton key={item.id} active={tab === item.id} item={item} onClick={() => setTab(item.id)} />)}
           </nav>
           <div className="mt-auto border-t border-black/10 pt-5">
-            <div className="text-xs text-black/40">ADMIN</div>
+            <div className="text-xs text-black/40">{session.demo ? "DEMO ADMIN" : "ADMIN"}</div>
             <div className="mt-1 truncate text-sm font-medium">{session.email}</div>
             <button onClick={logout} className="mt-4 inline-flex items-center gap-2 text-sm text-black/60 transition hover:text-black"><LogOut size={16} /> Keluar</button>
           </div>
         </aside>
 
         <main className="w-full min-w-0">
+          {session.demo && <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="border-b border-amber-200 bg-amber-50 px-4 py-2.5 text-center text-xs font-medium text-amber-900 lg:px-8">DEMO MODE · Data ini terisolasi untuk browser kamu dan otomatis kedaluwarsa setelah 24 jam.</motion.div>}
           <header className="sticky top-0 z-30 border-b border-black/10 bg-white/90 px-4 py-3 backdrop-blur lg:px-8">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -331,7 +332,7 @@ export default function AdminPage() {
               </div>
               <div className="flex items-center gap-2">
                 <AnimatedButton variant="ghost" onClick={() => refresh()} disabled={loading} title="Muat ulang data"><RefreshCw size={17} className={loading ? "animate-spin" : ""} /></AnimatedButton>
-                <a href="/" className="hidden items-center gap-1 rounded-xl px-3 py-2 text-sm font-medium transition hover:bg-[#f5f1e9] sm:inline-flex">Lihat toko <ExternalLink size={15} /></a>
+                {session.demo ? <span className="hidden rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900 sm:inline-flex">Sandbox Demo</span> : <a href="/" className="hidden items-center gap-1 rounded-xl px-3 py-2 text-sm font-medium transition hover:bg-[#f5f1e9] sm:inline-flex">Lihat toko <ExternalLink size={15} /></a>}
               </div>
             </div>
             <div className="mt-3 flex gap-2 overflow-x-auto pb-1 lg:hidden">
@@ -366,9 +367,17 @@ function NavButton({ item, active, onClick, compact = false }: any) { const Icon
 function AnimatedButton({ children, variant = "primary", className = "", ...props }: any) { return <motion.button whileHover={{ scale: 1.015 }} whileTap={{ scale: .97 }} transition={{ type: "spring", stiffness: 420, damping: 22 }} className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-medium transition ${variant === "primary" ? "bg-[#1B2A4A] text-white shadow-sm hover:bg-[#16233e]" : variant === "danger" ? "border border-red-200 bg-white text-red-700 hover:bg-red-50" : "border border-black/10 bg-white text-[#1B2A4A] hover:bg-[#f7f4ed]"} ${className}`} {...props}>{children}</motion.button>; }
 
 function AdminLogin({ configured, onDone }: { configured: boolean; onDone: () => void }) {
-  const [email, setEmail] = useState(""); const [password, setPassword] = useState(""); const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
+  const [email, setEmail] = useState(""); const [password, setPassword] = useState(""); const [error, setError] = useState(""); const [busy, setBusy] = useState(false); const [demoBusy, setDemoBusy] = useState(false);
   const submit = async (e: React.FormEvent) => { e.preventDefault(); setBusy(true); setError(""); try { const r = await fetch("/api/admin/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password }) }); const d = await r.json(); if (!r.ok) throw new Error(d.error || "Gagal masuk."); onDone(); } catch (e) { setError(e instanceof Error ? e.message : "Gagal masuk."); } finally { setBusy(false); } };
-  return <main className="min-h-screen bg-[#f6f3ed] grid place-items-center px-4"><motion.form initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .35 }} onSubmit={submit} className={`${card} w-full max-w-md p-7`}><div className="text-3xl font-black">MERX</div><div className="mt-1 text-sm text-black/50">Admin Studio</div>{!configured && <div className="mt-6 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">Credential admin belum dikonfigurasi di Vercel.</div>}<label className="mt-6 block text-sm">Email<input required type="email" className={`${input} mt-2`} value={email} onChange={e => setEmail(e.target.value)} /></label><label className="mt-4 block text-sm">Kata sandi<input required type="password" className={`${input} mt-2`} value={password} onChange={e => setPassword(e.target.value)} /></label><AnimatedButton type="submit" disabled={!configured || busy} className="mt-6 h-12 w-full">{busy ? <Loader2 size={17} className="animate-spin" /> : null}{busy ? "Memeriksa…" : "Masuk ke Admin"}</AnimatedButton>{error && <p className="mt-4 text-sm text-red-700">{error}</p>}</motion.form></main>;
+  const startDemo = async () => { setDemoBusy(true); setError(""); try { const r = await fetch("/api/admin/demo", { method: "POST" }); const d = await r.json(); if (!r.ok) throw new Error(d.error || "Demo belum tersedia."); onDone(); } catch (e) { setError(e instanceof Error ? e.message : "Gagal membuka demo."); } finally { setDemoBusy(false); } };
+  return <main className="min-h-screen bg-[#f6f3ed] grid place-items-center px-4 py-10"><motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .35 }} className={`${card} w-full max-w-md p-7`}>
+    <div className="text-3xl font-black">MERX</div><div className="mt-1 text-sm text-black/50">Admin Studio</div>
+    <div className="mt-6 rounded-lg border border-[#1B2A4A]/10 bg-[#faf8f4] p-4"><div className="font-semibold">Coba MERX sebagai Demo</div><p className="mt-1 text-sm leading-5 text-black/55">Buka sandbox pribadi untuk mencoba produk, order, pengiriman, pajak, diskon, dan saldo tanpa menyentuh toko utama.</p><AnimatedButton type="button" onClick={startDemo} disabled={demoBusy} className="mt-4 h-11 w-full">{demoBusy ? <Loader2 size={16} className="animate-spin" /> : <ExternalLink size={16} />}{demoBusy ? "Menyiapkan demo…" : "Coba Demo Admin"}</AnimatedButton><div className="mt-3 text-xs text-black/40">Workspace demo terpisah per browser dan berumur 24 jam.</div></div>
+    <div className="my-7 flex items-center gap-3 text-xs uppercase tracking-[.18em] text-black/30"><span className="h-px flex-1 bg-black/10" /> Admin toko <span className="h-px flex-1 bg-black/10" /></div>
+    {!configured && <div className="mb-6 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900">Credential admin belum dikonfigurasi di Environment Variables Vercel.</div>}
+    <form onSubmit={submit}><label className="block text-sm">Email<input required type="email" className={`${input} mt-2`} value={email} onChange={e => setEmail(e.target.value)} /></label><label className="mt-4 block text-sm">Kata sandi<input required type="password" className={`${input} mt-2`} value={password} onChange={e => setPassword(e.target.value)} /></label><AnimatedButton type="submit" disabled={!configured || busy} className="mt-6 h-12 w-full">{busy ? <Loader2 size={17} className="animate-spin" /> : null}{busy ? "Memeriksa…" : "Masuk ke Admin Toko"}</AnimatedButton></form>
+    {error && <p className="mt-4 text-sm text-red-700">{error}</p>}
+  </motion.div></main>;
 }
 
 function Dashboard({ analytics, products, lowStock, orders, wallet }: { analytics: Analytics | null; products: Product[]; lowStock: Product[]; orders: Order[]; wallet: WalletData | null }) {

@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { getAdminEmail } from "@/lib/server/admin-auth";
 import { dbConfigured, supabaseRequest } from "@/lib/server/supabase";
+import { adminBody, adminPath, adminTable, isDemoAdmin, getDemoWorkspaceId } from "@/lib/server/admin-scope";
 
 export async function GET() {
   if (!getAdminEmail()) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!dbConfigured) return NextResponse.json({ error: "Database belum dikonfigurasi." }, { status: 503 });
   try {
-    const rows = await supabaseRequest<any[]>("store_settings?select=*&id=eq.1&limit=1");
+    const rows = await supabaseRequest<any[]>(adminPath("store_settings", isDemoAdmin() ? "select=*&limit=1" : "select=*&id=eq.1&limit=1"));
     return NextResponse.json(rows?.[0] || null);
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Gagal memuat pengaturan toko." }, { status: 500 });
@@ -39,7 +40,7 @@ export async function PATCH(req: Request) {
       },
       updated_at: new Date().toISOString(),
     };
-    const data = await supabaseRequest("store_settings?id=eq.1", { method: "PATCH", headers: { Prefer: "return=representation" }, body: JSON.stringify(row) });
+    const data = await supabaseRequest(adminPath("store_settings", isDemoAdmin() ? "" : "id=eq.1"), { method: "PATCH", headers: { Prefer: "return=representation" }, body: JSON.stringify(adminBody(row)) });
     return NextResponse.json(data);
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Gagal menyimpan pengaturan toko." }, { status: 500 });

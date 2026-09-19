@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAdminEmail } from "@/lib/server/admin-auth";
 import { dbConfigured, supabaseRequest } from "@/lib/server/supabase";
+import { adminPath, adminTable, isDemoAdmin, getDemoWorkspaceId } from "@/lib/server/admin-scope";
 
 export async function GET() {
   if (!getAdminEmail()) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -8,8 +9,8 @@ export async function GET() {
 
   try {
     const [walletRows, transactions] = await Promise.all([
-      supabaseRequest<any[]>("store_wallets?select=*&id=eq.1&limit=1"),
-      supabaseRequest<any[]>("wallet_transactions?select=*&wallet_id=eq.1&order=created_at.desc&limit=100"),
+      supabaseRequest<any[]>(adminPath("store_wallets", isDemoAdmin() ? "select=*&limit=1" : "select=*&id=eq.1&limit=1")),
+      supabaseRequest<any[]>(adminPath("wallet_transactions", isDemoAdmin() ? "select=*&order=created_at.desc&limit=100" : "select=*&wallet_id=eq.1&order=created_at.desc&limit=100")),
     ]);
     return NextResponse.json({
       configured: true,
@@ -35,15 +36,25 @@ export async function POST(req: Request) {
     if (!amount) return NextResponse.json({ error: "Jumlah penarikan harus lebih dari 0." }, { status: 400 });
     if (!destination) return NextResponse.json({ error: "Tujuan rekening / wallet harus diisi." }, { status: 400 });
 
-    const result = await supabaseRequest<any>("rpc/merx_withdraw_wallet", {
-      method: "POST",
-      body: JSON.stringify({
-        p_amount: amount,
-        p_method: method,
-        p_destination: destination,
-        p_note: note,
-      }),
-    });
+    let result: any;
+    if (isDemoAdmin()) {
+      const workspaceId = getDemoWorkspaceId();
+      const walletRows = await supabaseRequest<any[]>(adminPath("store_wallets", "select=id,balance&limit=1"));
+      const wallet = walletRows?.[0];
+      if (!workspaceId || !wallet) throw new Error("Demo wallet tidak ditemukan.");
+      const balance = Number(wallet.balance || 0);
+      if (balance < amount) throw new Error(`Saldo demo tidak mencukupi. Saldo tersedia Rp ${balance.toLocaleString("id-ID")}`);
+      const nextBalance = balance - amount;
+      await supabaseRequest(adminPath("store_wallets", `workspace_id=eq.${encodeURIComponent(workspaceId)}`), { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ balance: nextBalance, updated_at: new Date().toISOString() }) });
+      const reference = `demo-withdrawal:${workspaceId}:${Date.now()}:${amount}`;
+      await supabaseRequest(adminTable("wallet_transactions"), { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ workspace_id: workspaceId, wallet_id: wallet.id, direction: "debit", transaction_type: "withdrawal", amount, reference_key: reference, reference_type: "withdrawal", reference_id: reference, method, destination, note }) });
+      result = { ok: true, amount, balance: nextBalance };
+    } else {
+      result = await supabaseRequest<any>("rpc/merx_withdraw_wallet", {
+        method: "POST",
+        body: JSON.stringify({ p_amount: amount, p_method: method, p_destination: destination, p_note: note }),
+      });
+    }
 
     return NextResponse.json(result);
   } catch (error) {

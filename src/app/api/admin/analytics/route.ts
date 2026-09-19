@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAdminEmail } from "@/lib/server/admin-auth";
 import { dbConfigured, supabaseRequest } from "@/lib/server/supabase";
 import { products } from "@/data/products";
+import { adminPath } from "@/lib/server/admin-scope";
 
 function merchandiseRevenue(order: any) {
   const shippingFee = Number(order.shipping?.shippingFee || 0);
@@ -23,10 +24,10 @@ export async function GET() {
   if (!dbConfigured) return NextResponse.json({ configured: false, revenue: 0, taxTotal: 0, cost: 0, extraCost: 0, profit: 0, margin: 0, orders: 0, topCheckout: [], topSaved: [], lowStock: [] });
   try {
     const [orders, items, saves, lowStock] = await Promise.all([
-      supabaseRequest<any[]>("orders?select=subtotal,total,tax_total,cost_total,other_cost,shipping,status,created_at&status=neq.cancelled&limit=5000"),
-      supabaseRequest<any[]>("order_items?select=product_id,title,quantity,unit_price,cost_price&limit=5000"),
-      supabaseRequest<any[]>("wishlist_events?select=product_id,event_type&event_type=eq.save&limit=5000"),
-      supabaseRequest<any[]>("products?select=id,title,stock&stock=lte.5&order=stock.asc&limit=20"),
+      supabaseRequest<any[]>(adminPath("orders", "select=subtotal,total,tax_total,cost_total,other_cost,shipping,status,created_at&status=neq.cancelled&limit=5000")),
+      supabaseRequest<any[]>(adminPath("order_items", "select=product_id,title,quantity,unit_price,cost_price&limit=5000")),
+      supabaseRequest<any[]>(adminPath("wishlist_events", "select=product_id,event_type&event_type=eq.save&limit=5000")),
+      supabaseRequest<any[]>(adminPath("products", "select=id,title,stock&stock=lte.5&order=stock.asc&limit=20")),
     ]);
     const revenue = (orders || []).reduce((sum: number, o: any) => sum + merchandiseRevenue(o), 0);
     const taxTotal = (orders || []).reduce((sum: number, o: any) => sum + Number(o.tax_total || 0), 0);

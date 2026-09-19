@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server";
-import { getAdminEmail, isAdminConfigured, refreshAdminCookie } from "@/lib/server/admin-auth";
+import { getAdminContext, isAdminConfigured, refreshAdminCookie } from "@/lib/server/admin-auth";
 
 export async function GET() {
-  const email = getAdminEmail();
-  if (email) refreshAdminCookie(email);
+  const context = getAdminContext();
+  if (context?.mode === "live") refreshAdminCookie(context.email);
   return NextResponse.json({
-    authenticated: Boolean(email),
+    authenticated: Boolean(context),
     configured: isAdminConfigured(),
-    email,
-    expiresInDays: 30,
+    email: context?.email || null,
+    mode: context?.mode || null,
+    demo: context?.mode === "demo",
+    workspaceId: context?.workspaceId || null,
+    expiresInDays: context?.mode === "demo" ? 1 : 30,
   });
 }

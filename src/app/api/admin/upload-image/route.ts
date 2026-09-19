@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminEmail } from "@/lib/server/admin-auth";
+import { getDemoWorkspaceId, isDemoAdmin } from "@/lib/server/admin-auth";
 
 const BUCKET = "product-images";
 function storageHeaders(key: string) { return { apikey: key, Authorization: `Bearer ${key}` }; }
@@ -28,7 +29,8 @@ export async function POST(req: Request) {
       }
     }
 
-    const path = `${new Date().toISOString().slice(0, 10)}/${Date.now()}-${safeName(file.name)}`;
+    const prefix = isDemoAdmin() ? `demo/${getDemoWorkspaceId()}` : "live";
+    const path = `${prefix}/${new Date().toISOString().slice(0, 10)}/${Date.now()}-${safeName(file.name)}`;
     const uploadResponse = await fetch(`${url}/storage/v1/object/${BUCKET}/${path}`, {
       method: "POST",
       headers: { ...storageHeaders(key), "Content-Type": file.type, "x-upsert": "true" },

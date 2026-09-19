@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAdminEmail } from "@/lib/server/admin-auth";
 import { dbConfigured, ensureProductsSeeded, supabaseRequest } from "@/lib/server/supabase";
 import { calculateBasePrice, normalizePricingRule } from "@/lib/admin-pricing";
+import { adminBody, adminPath, adminTable, isDemoAdmin } from "@/lib/server/admin-scope";
 
 function guard() {
   if (!getAdminEmail()) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -77,8 +78,8 @@ export async function GET() {
   const denied = guard();
   if (denied) return denied;
   try {
-    await ensureProductsSeeded();
-    const rows = await supabaseRequest<any[]>("products?select=*&order=id.asc&limit=500");
+    if (!isDemoAdmin()) await ensureProductsSeeded();
+    const rows = await supabaseRequest<any[]>(adminPath("products", "select=*&order=id.asc&limit=500"));
     return NextResponse.json(rows);
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Gagal memuat produk." }, { status: 500 });
@@ -91,11 +92,12 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const row = buildRow(body);
+    if (isDemoAdmin()) delete (row as any).id;
     if (!row.title) return NextResponse.json({ error: "Nama produk wajib diisi." }, { status: 400 });
-    const data = await supabaseRequest("products", {
+    const data = await supabaseRequest(adminTable("products"), {
       method: "POST",
       headers: { Prefer: "return=representation" },
-      body: JSON.stringify(row),
+      body: JSON.stringify(adminBody(row)),
     });
     return NextResponse.json(data);
   } catch (error) {
@@ -110,14 +112,14 @@ export async function PATCH(req: Request) {
     const body = await req.json();
     const id = Number(body.id);
     if (!id) return NextResponse.json({ error: "ID produk tidak valid." }, { status: 400 });
-    const currentRows = await supabaseRequest<any[]>(`products?select=*&id=eq.${id}&limit=1`);
+    const currentRows = await supabaseRequest<any[]>(adminPath("products", `select=*&id=eq.${id}&limit=1`));
     const current = currentRows?.[0];
     if (!current) return NextResponse.json({ error: "Produk tidak ditemukan." }, { status: 404 });
     const row = buildRow({ ...current, ...body }, current);
-    const data = await supabaseRequest(`products?id=eq.${id}`, {
+    const data = await supabaseRequest(adminPath("products", `id=eq.${id}`), {
       method: "PATCH",
       headers: { Prefer: "return=representation" },
-      body: JSON.stringify(row),
+      body: JSON.stringify(adminBody(row)),
     });
     return NextResponse.json(data);
   } catch (error) {
@@ -132,7 +134,7 @@ export async function DELETE(req: Request) {
     const { id } = await req.json();
     const productId = Number(id);
     if (!productId) return NextResponse.json({ error: "ID produk tidak valid." }, { status: 400 });
-    await supabaseRequest(`products?id=eq.${productId}`, { method: "DELETE" });
+    await supabaseRequest(adminPath("products", `id=eq.${productId}`), { method: "DELETE" });
     return NextResponse.json({ ok: true });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Gagal menghapus produk." }, { status: 500 });

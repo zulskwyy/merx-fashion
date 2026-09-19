@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAdminEmail } from "@/lib/server/admin-auth";
 import { dbConfigured, supabaseRequest } from "@/lib/server/supabase";
+import { adminBody, adminPath } from "@/lib/server/admin-scope";
 
 const STATUS = ["paid", "processing", "packed", "ready_to_ship", "shipped", "delivered", "cancelled"];
 const DELIVERY_STATUS = ["pending", "delivered"];
@@ -10,8 +11,8 @@ export async function GET() {
   if (!dbConfigured) return NextResponse.json([]);
   try {
     const [orders, items] = await Promise.all([
-      supabaseRequest<any[]>("orders?select=*&order=created_at.desc&limit=100"),
-      supabaseRequest<any[]>("order_items?select=*&limit=1000"),
+      supabaseRequest<any[]>(adminPath("orders", "select=*&order=created_at.desc&limit=100")),
+      supabaseRequest<any[]>(adminPath("order_items", "select=*&limit=1000")),
     ]);
     const byOrder = (items || []).reduce((acc: Record<string, any[]>, item: any) => {
       const key = String(item.order_id);
@@ -50,7 +51,7 @@ export async function PATCH(req: Request) {
 
     // Ongkir adalah snapshot saat checkout. Fulfillment admin hanya mengubah status penerimaan.
 
-    const data = await supabaseRequest(`orders?id=eq.${id}`, {
+    const data = await supabaseRequest(adminPath("orders", `id=eq.${id}`), {
       method: "PATCH",
       headers: { Prefer: "return=representation" },
       body: JSON.stringify(row),
