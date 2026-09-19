@@ -437,7 +437,7 @@ function Dashboard({ analytics, products, lowStock, orders, wallet }: { analytic
         <div className="hidden text-right text-xs text-black/40 sm:block">Berdasarkan order yang tersimpan di sistem</div>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Metric title="Omzet penjualan" value={formatIDR(revenue)} icon={<CircleDollarSign size={18} />} />
+        <Metric title="Omzet akumulasi" value={formatIDR(revenue)} icon={<CircleDollarSign size={18} />} />
         <Metric title="Pajak tercatat" value={formatIDR(analytics?.taxTotal || 0)} icon={<Percent size={18} />} />
         <Metric title="Modal barang" value={formatIDR(cost)} icon={<Package size={18} />} />
         <Metric title="Laba setelah pajak" value={formatIDR(profit)} icon={<TrendingUp size={18} />} positive={profit >= 0} />
