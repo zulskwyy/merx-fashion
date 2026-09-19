@@ -18,6 +18,9 @@ export async function PATCH(req: Request) {
   if (!dbConfigured) return NextResponse.json({ error: "Database belum dikonfigurasi." }, { status: 503 });
   try {
     const b = await req.json();
+    const commerce = b.commerceSettings || b.commerce_settings || {};
+    const taxRate = Math.max(0, Math.min(100, Number(commerce.taxRate ?? 11)));
+    const shippingFee = Math.max(0, Math.round(Number(commerce.shippingFee ?? 0)));
     const row = {
       store_name: b.storeName || "MERX",
       primary_color: b.primaryColor || "#1B2A4A",
@@ -25,6 +28,7 @@ export async function PATCH(req: Request) {
       hero_title: b.heroTitle || "",
       hero_description: b.heroDescription || "",
       hero_image_url: b.heroImageUrl || "",
+      commerce_settings: { shippingFee, taxRate },
       business: {
         phone: b.business?.phone || "",
         email: b.business?.email || "",

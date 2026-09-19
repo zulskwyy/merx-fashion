@@ -3,6 +3,7 @@ import { getAdminEmail } from "@/lib/server/admin-auth";
 import { dbConfigured, supabaseRequest } from "@/lib/server/supabase";
 
 const STATUS = ["paid", "processing", "packed", "ready_to_ship", "shipped", "delivered", "cancelled"];
+const DELIVERY_STATUS = ["pending", "delivered"];
 
 export async function GET() {
   if (!getAdminEmail()) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -30,22 +31,25 @@ export async function PATCH(req: Request) {
     const body = await req.json();
     const id = Number(body.id);
     if (!id) return NextResponse.json({ error: "ID order tidak valid." }, { status: 400 });
-    const status = String(body.status || "paid");
-    if (!STATUS.includes(status)) return NextResponse.json({ error: "Status order tidak valid." }, { status: 400 });
-    const shipping = {
-      courier: String(body.shipping?.courier || ""),
-      trackingNumber: String(body.shipping?.trackingNumber || ""),
-      shippingFee: Math.max(0, Math.round(Number(body.shipping?.shippingFee || 0))),
-      shippingCost: Math.max(0, Math.round(Number(body.shipping?.shippingCost || 0))),
-      note: String(body.shipping?.note || ""),
-      updatedAt: new Date().toISOString(),
-    };
-    const row = {
-      status,
-      shipping,
-      other_cost: Math.max(0, Math.round(Number(body.other_cost ?? 0))),
-      updated_at: new Date().toISOString(),
-    };
+    const row: Record<string, any> = { updated_at: new Date().toISOString() };
+
+    if (body.status !== undefined) {
+      const status = String(body.status || "paid");
+      if (!STATUS.includes(status)) return NextResponse.json({ error: "Status order tidak valid." }, { status: 400 });
+      row.status = status;
+    }
+
+    if (body.delivery_status !== undefined) {
+      const deliveryStatus = String(body.delivery_status || "pending");
+      if (!DELIVERY_STATUS.includes(deliveryStatus)) return NextResponse.json({ error: "Status penerimaan tidak valid." }, { status: 400 });
+      row.delivery_status = deliveryStatus;
+      row.delivered_at = deliveryStatus === "delivered" ? (body.delivered_at || new Date().toISOString()) : null;
+    }
+
+    if (body.other_cost !== undefined) row.other_cost = Math.max(0, Math.round(Number(body.other_cost || 0)));
+
+    // Ongkir adalah snapshot saat checkout. Fulfillment admin hanya mengubah status penerimaan.
+
     const data = await supabaseRequest(`orders?id=eq.${id}`, {
       method: "PATCH",
       headers: { Prefer: "return=representation" },

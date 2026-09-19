@@ -1,0 +1,8 @@
+MERX Commerce & Admin Operations v4
+
+- Shipping is captured as a checkout snapshot and is not editable during fulfillment.
+- Admin delivery control only changes pending/delivered receipt state; it does not rewrite fulfillment status.
+- Removed legacy fulfillment writes for courier/tracking/shipping so checkout shipping cannot be accidentally overwritten.
+- Profit estimate no longer subtracts an invented shipping cost that admin never entered.
+- Product editor labels make main-image vs gallery uploads explicit.
+- Existing duplicate, automatic/manual tax, image storage, pricing, wallet, session, and catalog features are preserved.

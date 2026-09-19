@@ -1,9 +1,9 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { Discount } from "@/types/product.types";
+import { Discount, TaxRule } from "@/types/product.types";
 import { discountedPrice, getCartSubtotal, getCartTotal } from "@/lib/catalog";
 
 export type RemoveCartItem = { id: number; attributes: string[] };
-export type CartItem = { id: number; name: string; srcUrl: string; price: number; attributes: string[]; discount: Discount; quantity: number };
+export type CartItem = { id: number; name: string; srcUrl: string; price: number; attributes: string[]; discount: Discount; tax?: TaxRule; quantity: number };
 export type Cart = { items: CartItem[]; totalQuantities: number };
 interface CartsState { cart: Cart | null; totalPrice: number; adjustedTotalPrice: number; action: "update" | "add" | "delete" | null; }
 const initialState: CartsState = { cart: null, totalPrice: 0, adjustedTotalPrice: 0, action: null };

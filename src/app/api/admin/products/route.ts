@@ -18,10 +18,12 @@ function cleanSlug(value: string, fallback: string) {
   return slug || `produk-${Date.now()}`;
 }
 
-function normalizeGallery(body: any) {
-  const main = String(body.srcUrl || body.src_url || "").trim();
-  const gallery = Array.isArray(body.gallery) ? body.gallery.map((v: any) => String(v || "").trim()).filter(Boolean) : [];
-  return Array.from(new Set([main, ...gallery].filter(Boolean))).slice(0, 12);
+function normalizeImages(body: any, current?: any) {
+  const main = String(body.srcUrl || body.src_url || current?.src_url || "").trim();
+  const gallery = Array.isArray(body.gallery)
+    ? body.gallery.map((v: any) => String(v || "").trim()).filter(Boolean).filter((v: string) => v !== main)
+    : (Array.isArray(current?.gallery) ? current.gallery.map((v: any) => String(v || "").trim()).filter(Boolean).filter((v: string) => v !== main) : []);
+  return { main, gallery: Array.from(new Set(gallery)).slice(0, 12) };
 }
 
 function buildRow(body: any, current?: any) {
@@ -29,8 +31,9 @@ function buildRow(body: any, current?: any) {
   const pricing = normalizePricingRule(body.pricing ?? current?.pricing ?? { mode: "manual", target: 0 });
   const suppliedPrice = Number(body.price ?? current?.price ?? 0);
   const price = calculateBasePrice(costPrice, pricing, suppliedPrice);
-  const gallery = normalizeGallery(body);
-  const srcUrl = gallery[0] || current?.src_url || "/images/header-homepage.png";
+  const images = normalizeImages(body, current);
+  const srcUrl = images.main || "/images/header-homepage.png";
+  const gallery = images.gallery;
   const discount = {
     amount: Math.max(0, Number(body.discount?.amount ?? current?.discount?.amount ?? 0)),
     percentage: Math.max(0, Math.min(90, Number(body.discount?.percentage ?? current?.discount?.percentage ?? 0))),
@@ -42,9 +45,13 @@ function buildRow(body: any, current?: any) {
     title: String(body.title ?? current?.title ?? "Produk Baru").trim(),
     slug: cleanSlug(body.slug ?? current?.slug, body.title ?? current?.title ?? "produk"),
     src_url: srcUrl,
-    gallery: gallery.length ? gallery : [srcUrl],
+    gallery,
     price,
     discount,
+    tax: {
+      mode: body.tax?.mode === "manual" ? "manual" : "auto",
+      rate: body.tax?.mode === "manual" ? Math.max(0, Math.min(100, Number(body.tax?.rate ?? 0))) : null,
+    },
     pricing,
     rating: Number(body.rating ?? current?.rating ?? 0),
     review_count: Number(body.reviewCount ?? body.review_count ?? current?.review_count ?? 0),

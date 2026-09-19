@@ -29,6 +29,8 @@ export type StoreSettings = {
   heroTitle: string;
   heroDescription: string;
   heroImageUrl: string;
+  commerceSettings?: { shippingFee?: number; taxRate?: number };
+  commerce_settings?: { shippingFee?: number; taxRate?: number };
   business?: { phone?: string; email?: string; whatsapp?: string; address?: string; instagram?: string; shippingNote?: string };
   updatedAt?: string;
 };
@@ -47,6 +49,7 @@ export async function ensureProductsSeeded() {
     gallery: p.gallery,
     price: p.price,
     discount: p.discount,
+    tax: { mode: "auto", rate: null },
     pricing: { mode: "manual", target: 0 },
     rating: p.rating,
     review_count: p.reviewCount,

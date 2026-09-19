@@ -3,6 +3,11 @@ export type Discount = {
   percentage: number;
 };
 
+export type TaxRule = {
+  mode: "auto" | "manual";
+  rate?: number | null;
+};
+
 export type FAQ = {
   question: string;
   answer: string;
@@ -16,6 +21,7 @@ export type Product = {
   gallery: string[];
   price: number;
   discount: Discount;
+  tax?: TaxRule;
   rating: number;
   reviewCount: number;
   category: string;
