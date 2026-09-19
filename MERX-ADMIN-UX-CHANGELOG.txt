@@ -1,0 +1,17 @@
+MERX Admin UX Refresh
+
+Perubahan utama:
+- Dashboard memisahkan Saldo Siap Ditarik dari Kinerja Penjualan.
+- Saldo menampilkan kondisi uang internal saat ini setelah penarikan.
+- Masuk Hari Ini dan Keluar Hari Ini ditampilkan terpisah.
+- Omzet, Modal Terjual, Laba Estimasi, dan Margin diberi label sebagai angka akumulasi.
+- Ditambahkan penjelasan eksplisit bahwa saldo dan omzet adalah metrik berbeda.
+- Halaman Keuangan diganti menjadi struktur Saldo Saat Ini, Mutasi Hari Ini, Akumulasi Mutasi, Catat Penarikan, dan Riwayat Saldo.
+- Kartu admin dibuat lebih kotak/rapi dan konsisten.
+- Animasi hover, entry, list transition, dan tombol tetap memakai Framer Motion dengan gerakan ringan.
+- Tidak mengubah API/database atau alur produk/order; perubahan utama berada pada UI admin.
+- Pemeriksaan parse TypeScript/TSX untuk file admin, layout, dan wallet route berhasil.
+
+Catatan build:
+- npm install pada environment pemeriksaan ini tidak selesai karena timeout jaringan, sehingga verifikasi lokal penuh Next.js tidak dapat dijalankan di sini.
+- Struktur sumber dan sintaks TSX/TS yang diubah lolos parser TypeScript.

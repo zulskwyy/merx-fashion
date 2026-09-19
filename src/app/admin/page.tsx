@@ -136,7 +136,7 @@ type Settings = {
 };
 
 const input = "w-full rounded-xl border border-black/10 bg-white px-4 py-3 outline-none transition focus:border-[#1B2A4A] focus:ring-2 focus:ring-[#1B2A4A]/10";
-const card = "rounded-2xl border border-black/10 bg-white shadow-[0_8px_35px_rgba(27,42,74,.05)]";
+const card = "rounded-xl border border-black/10 bg-white shadow-[0_8px_35px_rgba(27,42,74,.05)]";
 const statuses = ["paid", "processing", "packed", "ready_to_ship", "shipped", "delivered", "cancelled"];
 const couriers = ["JNE", "J&T", "SiCepat", "AnterAja", "Ninja Xpress", "Pos Indonesia", "Gojek", "Grab", "Lainnya"];
 
@@ -316,7 +316,7 @@ export default function AdminPage() {
             <AnimatePresence>{error && <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="mb-5 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"><AlertTriangle size={18} className="mt-0.5 shrink-0" /><div className="flex-1">{error}</div><button onClick={() => setError("")}><X size={16} /></button></motion.div>}</AnimatePresence>
 
             <AnimatePresence mode="wait">
-              {tab === "dashboard" && <motion.div key="dashboard" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}><Dashboard analytics={analytics} products={products} lowStock={lowStock} orders={orders} walletBalance={wallet?.balance || 0} /></motion.div>}
+              {tab === "dashboard" && <motion.div key="dashboard" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}><Dashboard analytics={analytics} products={products} lowStock={lowStock} orders={orders} wallet={wallet} /></motion.div>}
               {tab === "products" && <motion.div key="products" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}><Products products={products} onAdd={() => setEditing(blankProduct(products))} onEdit={setEditing} onDelete={deleteProduct} /></motion.div>}
               {tab === "orders" && <motion.div key="orders" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}><Orders orders={orders} onOpen={setSelectedOrder} /></motion.div>}
               {tab === "discounts" && <motion.div key="discounts" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}><Discounts value={discount} setValue={setDiscount} onSave={saveDiscount} saving={saving} /></motion.div>}
@@ -344,25 +344,121 @@ function AdminLogin({ configured, onDone }: { configured: boolean; onDone: () =>
   return <main className="min-h-screen bg-[#f6f3ed] grid place-items-center px-4"><motion.form initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .35 }} onSubmit={submit} className={`${card} w-full max-w-md p-7`}><div className="text-3xl font-black">MERX</div><div className="mt-1 text-sm text-black/50">Admin Studio</div>{!configured && <div className="mt-6 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">Credential admin belum dikonfigurasi di Vercel.</div>}<label className="mt-6 block text-sm">Email<input required type="email" className={`${input} mt-2`} value={email} onChange={e => setEmail(e.target.value)} /></label><label className="mt-4 block text-sm">Kata sandi<input required type="password" className={`${input} mt-2`} value={password} onChange={e => setPassword(e.target.value)} /></label><AnimatedButton type="submit" disabled={!configured || busy} className="mt-6 h-12 w-full">{busy ? <Loader2 size={17} className="animate-spin" /> : null}{busy ? "Memeriksa…" : "Masuk ke Admin"}</AnimatedButton>{error && <p className="mt-4 text-sm text-red-700">{error}</p>}</motion.form></main>;
 }
 
-function Dashboard({ analytics, products, lowStock, orders, walletBalance }: { analytics: Analytics | null; products: Product[]; lowStock: Product[]; orders: Order[]; walletBalance: number }) {
+function Dashboard({ analytics, products, lowStock, orders, wallet }: { analytics: Analytics | null; products: Product[]; lowStock: Product[]; orders: Order[]; wallet: WalletData | null }) {
   const awaiting = orders.filter(o => ["paid", "processing", "packed", "ready_to_ship"].includes(o.status)).length;
-  const revenue = analytics?.revenue || 0, cost = analytics?.cost || 0, profit = analytics?.profit || 0;
+  const revenue = analytics?.revenue || 0;
+  const cost = analytics?.cost || 0;
+  const profit = analytics?.profit || 0;
+  const transactions = wallet?.transactions || [];
+  const todayKey = new Date().toLocaleDateString("en-CA");
+  const todayCredits = transactions
+    .filter(tx => tx.direction === "credit" && new Date(tx.created_at).toLocaleDateString("en-CA") === todayKey)
+    .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+  const todayWithdrawals = transactions
+    .filter(tx => tx.direction === "debit" && new Date(tx.created_at).toLocaleDateString("en-CA") === todayKey)
+    .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+  const activeProducts = products.filter(p => p.is_active !== false && p.isActive !== false).length;
+  const currentBalance = wallet?.balance || 0;
+
   return <div>
-    <PageHeader eyebrow="DASHBOARD" title="Kontrol toko" text="Lihat penjualan, modal, laba, stok, dan alur pesanan dalam satu tempat." />
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
-      <Metric title="Saldo tersedia" value={formatIDR(walletBalance)} icon={<WalletCards size={18} />} />
-      <Metric title="Pendapatan" value={formatIDR(revenue)} icon={<CircleDollarSign size={18} />} />
-      <Metric title="Modal barang" value={formatIDR(cost)} icon={<Package size={18} />} />
-      <Metric title="Laba estimasi" value={formatIDR(profit)} icon={<TrendingUp size={18} />} positive={profit >= 0} />
-      <Metric title="Margin" value={`${(analytics?.margin || 0).toFixed(1)}%`} icon={<Percent size={18} />} />
-      <Metric title="Perlu diproses" value={String(awaiting)} icon={<Send size={18} />} />
+    <PageHeader
+      eyebrow="DASHBOARD"
+      title="Kontrol toko"
+      text="Pisahkan jelas uang yang masih tersedia dari kinerja penjualan, supaya angka tidak tercampur."
+    />
+
+    <motion.section
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: .35, ease: "easeOut" }}
+      className="overflow-hidden rounded-xl border border-[#17233d] bg-[#1B2A4A] text-white shadow-[0_18px_45px_rgba(27,42,74,.16)]"
+    >
+      <div className="grid lg:grid-cols-[1.25fr_1fr]">
+        <div className="p-6 sm:p-8">
+          <div className="flex items-center justify-between gap-4">
+            <div className="text-xs uppercase tracking-[.22em] text-white/55">KAS & SALDO</div>
+            <WalletCards size={19} className="text-white/55" />
+          </div>
+          <div className="mt-6 text-sm text-white/65">Saldo siap ditarik</div>
+          <div className="mt-2 text-4xl font-semibold tracking-tight sm:text-5xl">{formatIDR(currentBalance)}</div>
+          <div className="mt-4 max-w-xl text-sm leading-6 text-white/60">
+            Ini adalah saldo internal MERX saat ini. Angkanya sudah berkurang setiap kali kamu mencatat penarikan.
+            <span className="text-white/80"> Saldo ini berbeda dari omzet.</span>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 border-t border-white/10 lg:border-l lg:border-t-0">
+          <motion.div whileHover={{ backgroundColor: "rgba(255,255,255,.045)" }} className="p-6 sm:p-8">
+            <div className="text-xs uppercase tracking-[.16em] text-white/45">Masuk hari ini</div>
+            <div className="mt-3 text-2xl font-semibold">{formatIDR(todayCredits)}</div>
+            <div className="mt-2 text-xs text-white/45">Pembayaran yang tercatat hari ini</div>
+          </motion.div>
+          <motion.div whileHover={{ backgroundColor: "rgba(255,255,255,.045)" }} className="border-l border-white/10 p-6 sm:p-8">
+            <div className="text-xs uppercase tracking-[.16em] text-white/45">Keluar hari ini</div>
+            <div className="mt-3 text-2xl font-semibold">{formatIDR(todayWithdrawals)}</div>
+            <div className="mt-2 text-xs text-white/45">Penarikan yang dicatat hari ini</div>
+          </motion.div>
+        </div>
+      </div>
+    </motion.section>
+
+    <section className="mt-8">
+      <div className="mb-4 flex items-end justify-between gap-4">
+        <div>
+          <div className="text-xs uppercase tracking-[.2em] text-black/35">KINERJA PENJUALAN</div>
+          <h2 className="mt-1 text-xl font-semibold tracking-tight">Angka akumulasi</h2>
+        </div>
+        <div className="hidden text-right text-xs text-black/40 sm:block">Berdasarkan order yang tersimpan di sistem</div>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Metric title="Omzet akumulasi" value={formatIDR(revenue)} icon={<CircleDollarSign size={18} />} />
+        <Metric title="Modal terjual" value={formatIDR(cost)} icon={<Package size={18} />} />
+        <Metric title="Laba estimasi" value={formatIDR(profit)} icon={<TrendingUp size={18} />} positive={profit >= 0} />
+        <Metric title="Margin estimasi" value={`${(analytics?.margin || 0).toFixed(1)}%`} icon={<Percent size={18} />} />
+      </div>
+      <div className="mt-4 flex items-start gap-3 rounded-xl border border-black/10 bg-[#faf8f4] px-4 py-3 text-sm text-black/55">
+        <CircleDollarSign size={17} className="mt-0.5 shrink-0 text-black/35" />
+        <p><b className="text-[#1B2A4A]">Omzet</b> adalah total nilai penjualan yang tercatat. <b className="text-[#1B2A4A]">Saldo</b> adalah uang internal yang masih tersisa setelah penarikan. Jadi saldo Rp0 tidak menghapus riwayat omzet.</p>
+      </div>
+    </section>
+
+    <section className="mt-8">
+      <div className="mb-4 flex items-end justify-between gap-4">
+        <div>
+          <div className="text-xs uppercase tracking-[.2em] text-black/35">OPERASIONAL</div>
+          <h2 className="mt-1 text-xl font-semibold tracking-tight">Yang perlu diperhatikan</h2>
+        </div>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <motion.div whileHover={{ y: -2 }} transition={{ type: "spring", stiffness: 320, damping: 24 }} className={`${card} p-5`}>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="text-xs uppercase tracking-[.14em] text-black/40">Pesanan aktif</div>
+              <div className="mt-2 text-3xl font-semibold">{awaiting}</div>
+              <div className="mt-2 text-sm text-black/50">Pesanan yang masih berada di alur pembayaran hingga siap kirim.</div>
+            </div>
+            <Send size={19} className="text-black/30" />
+          </div>
+        </motion.div>
+        <motion.div whileHover={{ y: -2 }} transition={{ type: "spring", stiffness: 320, damping: 24 }} className={`${card} p-5`}>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="text-xs uppercase tracking-[.14em] text-black/40">Produk aktif</div>
+              <div className="mt-2 text-3xl font-semibold">{activeProducts}</div>
+              <div className="mt-2 text-sm text-black/50">Dari {products.length} produk yang tercatat di database.</div>
+            </div>
+            <Package size={19} className="text-black/30" />
+          </div>
+        </motion.div>
+      </div>
+    </section>
+
+    <div className="mt-8 grid gap-6 xl:grid-cols-2">
+      <Panel title="Produk paling banyak checkout">{analytics?.topCheckout?.length ? <ol className="space-y-3">{analytics.topCheckout.slice(0, 8).map((x, i) => <motion.li layout key={x.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * .025 }} className="flex items-center justify-between border-b border-black/5 pb-3 last:border-0"><span><b className="mr-3 text-black/25">{String(i + 1).padStart(2, "0")}</b>{x.title}</span><span className="text-sm font-medium">{x.count} item</span></motion.li>)}</ol> : <Empty text="Belum ada checkout." />}</Panel>
+      <Panel title="Produk yang sering disimpan">{analytics?.topSaved?.length ? <ol className="space-y-3">{analytics.topSaved.slice(0, 8).map((x, i) => <motion.li layout key={x.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * .025 }} className="flex items-center justify-between border-b border-black/5 pb-3 last:border-0"><span><b className="mr-3 text-black/25">{String(i + 1).padStart(2, "0")}</b>{x.title}</span><span className="text-sm font-medium">{x.count} simpan</span></motion.li>)}</ol> : <Empty text="Belum ada data simpan." />}</Panel>
     </div>
-    <div className="mt-6 grid gap-6 xl:grid-cols-2">
-      <Panel title="Produk paling banyak checkout">{analytics?.topCheckout?.length ? <ol className="space-y-3">{analytics.topCheckout.slice(0, 8).map((x, i) => <motion.li layout key={x.id} className="flex items-center justify-between border-b border-black/5 pb-3 last:border-0"><span><b className="mr-3 text-black/25">{String(i + 1).padStart(2, "0")}</b>{x.title}</span><span className="text-sm font-medium">{x.count} item</span></motion.li>)}</ol> : <Empty text="Belum ada checkout." />}</Panel>
-      <Panel title="Produk yang sering disimpan">{analytics?.topSaved?.length ? <ol className="space-y-3">{analytics.topSaved.slice(0, 8).map((x, i) => <motion.li layout key={x.id} className="flex items-center justify-between border-b border-black/5 pb-3 last:border-0"><span><b className="mr-3 text-black/25">{String(i + 1).padStart(2, "0")}</b>{x.title}</span><span className="text-sm font-medium">{x.count} simpan</span></motion.li>)}</ol> : <Empty text="Belum ada data simpan." />}</Panel>
-    </div>
-    <Panel title="Peringatan stok" className="mt-6">{lowStock.length ? <div className="grid gap-3 sm:grid-cols-2">{lowStock.map(p => <div key={p.id} className="flex items-center justify-between rounded-xl bg-[#f6f3ed] p-4"><span className="truncate pr-4">{p.title}</span><b className={p.stock <= 0 ? "text-red-700" : "text-[#1B2A4A]"}>{p.stock} pcs</b></div>)}</div> : <Empty text="Semua stok di atas batas aman." />}</Panel>
-    <p className="mt-4 text-xs text-black/40">Jumlah produk aktif: {products.filter(p => p.is_active !== false && p.isActive !== false).length} · Total order tersimpan: {orders.length}</p>
+
+    <Panel title="Peringatan stok" className="mt-6">{lowStock.length ? <div className="grid gap-3 sm:grid-cols-2">{lowStock.map(p => <motion.div layout key={p.id} whileHover={{ y: -1 }} className="flex items-center justify-between rounded-lg bg-[#f6f3ed] p-4"><span className="truncate pr-4">{p.title}</span><b className={p.stock <= 0 ? "text-red-700" : "text-[#1B2A4A]"}>{p.stock} pcs</b></motion.div>)}</div> : <Empty text="Semua stok di atas batas aman." />}</Panel>
+    <p className="mt-4 text-xs text-black/40">Jumlah produk aktif: {activeProducts} · Total order tersimpan: {orders.length}</p>
   </div>;
 }
 
@@ -407,35 +503,62 @@ function Wallet() {
     }
   };
 
+  const todayKey = new Date().toLocaleDateString("en-CA");
   const credits = data.transactions.filter((x) => x.direction === "credit").reduce((sum, x) => sum + Number(x.amount || 0), 0);
   const withdrawals = data.transactions.filter((x) => x.direction === "debit").reduce((sum, x) => sum + Number(x.amount || 0), 0);
+  const todayCredits = data.transactions.filter((x) => x.direction === "credit" && new Date(x.created_at).toLocaleDateString("en-CA") === todayKey).reduce((sum, x) => sum + Number(x.amount || 0), 0);
+  const todayWithdrawals = data.transactions.filter((x) => x.direction === "debit" && new Date(x.created_at).toLocaleDateString("en-CA") === todayKey).reduce((sum, x) => sum + Number(x.amount || 0), 0);
 
   return <div>
-    <PageHeader eyebrow="KEUANGAN" title="Saldo & penarikan" text="Pembayaran yang sudah berstatus dibayar masuk otomatis ke saldo MERX. Saat dana ditarik, saldo internal langsung berkurang sesuai nominal penarikan." action={<AnimatedButton variant="ghost" onClick={() => load().catch((e) => setError(e instanceof Error ? e.message : "Gagal memuat saldo."))}><RefreshCw size={16} /> Refresh</AnimatedButton>} />
-    {error && <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>}
-    <div className="grid gap-4 sm:grid-cols-3">
-      <Metric title="Saldo tersedia" value={formatIDR(data.balance)} icon={<WalletCards size={18} />} />
-      <Metric title="Pembayaran masuk" value={formatIDR(credits)} icon={<CircleDollarSign size={18} />} />
-      <Metric title="Total ditarik" value={formatIDR(withdrawals)} icon={<Send size={18} />} />
-    </div>
-    <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.2fr]">
+    <PageHeader
+      eyebrow="KEUANGAN"
+      title="Saldo & mutasi"
+      text="Kelola saldo internal MERX tanpa mencampurnya dengan omzet akumulasi."
+      action={<AnimatedButton variant="ghost" onClick={() => load().catch((e) => setError(e instanceof Error ? e.message : "Gagal memuat saldo."))}><RefreshCw size={16} /> Refresh</AnimatedButton>}
+    />
+
+    {error && <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</motion.div>}
+
+    <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="overflow-hidden rounded-xl border border-[#17233d] bg-[#1B2A4A] text-white shadow-[0_18px_45px_rgba(27,42,74,.14)]">
+      <div className="grid lg:grid-cols-[1.15fr_1fr]">
+        <div className="p-6 sm:p-8">
+          <div className="text-xs uppercase tracking-[.22em] text-white/55">SALDO SAAT INI</div>
+          <div className="mt-5 text-sm text-white/65">Siap ditarik</div>
+          <div className="mt-1 text-4xl font-semibold tracking-tight sm:text-5xl">{formatIDR(data.balance)}</div>
+          <p className="mt-4 max-w-xl text-sm leading-6 text-white/60">Saldo ini adalah uang internal yang masih tersedia setelah seluruh penarikan yang dicatat. Riwayat transaksi tetap tersimpan walaupun saldo sekarang Rp0.</p>
+        </div>
+        <div className="grid grid-cols-2 border-t border-white/10 lg:border-l lg:border-t-0">
+          <div className="p-6 sm:p-8"><div className="text-xs uppercase tracking-[.16em] text-white/45">Masuk hari ini</div><div className="mt-3 text-2xl font-semibold">{formatIDR(todayCredits)}</div><div className="mt-2 text-xs text-white/45">Mutasi kredit hari ini</div></div>
+          <div className="border-l border-white/10 p-6 sm:p-8"><div className="text-xs uppercase tracking-[.16em] text-white/45">Keluar hari ini</div><div className="mt-3 text-2xl font-semibold">{formatIDR(todayWithdrawals)}</div><div className="mt-2 text-xs text-white/45">Mutasi debit hari ini</div></div>
+        </div>
+      </div>
+    </motion.section>
+
+    <section className="mt-8">
+      <div className="mb-4"><div className="text-xs uppercase tracking-[.2em] text-black/35">RIWAYAT KEUANGAN</div><h2 className="mt-1 text-xl font-semibold tracking-tight">Akumulasi mutasi</h2></div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Metric title="Total uang masuk" value={formatIDR(credits)} icon={<CircleDollarSign size={18} />} />
+        <Metric title="Total penarikan" value={formatIDR(withdrawals)} icon={<Send size={18} />} />
+      </div>
+      <div className="mt-4 rounded-xl border border-black/10 bg-[#faf8f4] px-4 py-3 text-sm text-black/55"><b className="text-[#1B2A4A]">Catatan:</b> angka akumulasi di bagian ini tidak berkurang saat kamu menarik saldo. Yang berkurang adalah <b className="text-[#1B2A4A]">saldo saat ini</b>.</div>
+    </section>
+
+    <div className="mt-8 grid gap-6 lg:grid-cols-[.9fr_1.1fr]">
       <section className={`${card} p-6`}>
-        <h2 className="text-lg font-semibold">Tarik saldo</h2>
-        <p className="mt-2 text-sm text-black/50">Gunakan setelah dana benar-benar kamu pindahkan ke bank, e-wallet, kas, atau tujuan lain. Sistem ini mencatat mutasi saldo internal MERX.</p>
-        <label className="mt-5 block text-sm">Jumlah penarikan<input className={`${input} mt-2`} type="number" min="1" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder={`Maks. ${data.balance}`} /></label>
+        <div className="flex items-start justify-between gap-4"><div><div className="text-xs uppercase tracking-[.18em] text-black/40">TINDAKAN</div><h2 className="mt-2 text-xl font-semibold">Catat penarikan</h2></div><Send size={19} className="text-black/30" /></div>
+        <p className="mt-3 text-sm leading-6 text-black/50">Gunakan ketika dana benar-benar kamu pindahkan ke bank, e-wallet, kas, atau tujuan lain. Sistem ini mencatat mutasi saldo internal MERX; tidak memindahkan uang secara otomatis.</p>
+        <label className="mt-5 block text-sm">Jumlah penarikan<input className={`${input} mt-2`} type="number" min="1" max={data.balance || undefined} value={amount} onChange={(e) => setAmount(e.target.value)} placeholder={`Maks. ${formatIDR(data.balance)}`} /></label>
         <label className="mt-4 block text-sm">Media<select className={`${input} mt-2`} value={method} onChange={(e) => setMethod(e.target.value)}><option value="bank">Bank</option><option value="ewallet">E-Wallet</option><option value="cash">Kas / tunai</option><option value="other">Lainnya</option></select></label>
         <label className="mt-4 block text-sm">Tujuan<input className={`${input} mt-2`} value={destination} onChange={(e) => setDestination(e.target.value)} placeholder="Contoh: BCA ****1234 / DANA 08xx" /></label>
         <label className="mt-4 block text-sm">Catatan<textarea className={`${input} mt-2 min-h-24`} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Keterangan penarikan" /></label>
-        <div className="mt-5 flex flex-wrap gap-2">
-          <AnimatedButton onClick={() => withdraw(false)} disabled={busy || !data.balance}>{busy ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />} Tarik saldo</AnimatedButton>
-          <AnimatedButton variant="ghost" onClick={() => withdraw(true)} disabled={busy || !data.balance}>Tarik semua {formatIDR(data.balance)}</AnimatedButton>
-        </div>
+        <div className="mt-5 flex flex-wrap gap-2"><AnimatedButton onClick={() => withdraw(false)} disabled={busy || !data.balance}>{busy ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />} {busy ? "Menyimpan…" : "Catat penarikan"}</AnimatedButton><AnimatedButton variant="ghost" onClick={() => withdraw(true)} disabled={busy || !data.balance}>Catat semua {formatIDR(data.balance)}</AnimatedButton></div>
       </section>
+
       <section className={`${card} p-6`}>
-        <h2 className="text-lg font-semibold">Riwayat mutasi</h2>
-        <div className="mt-4 space-y-2">
+        <div className="flex items-start justify-between gap-4"><div><div className="text-xs uppercase tracking-[.18em] text-black/40">MUTASI TERBARU</div><h2 className="mt-2 text-xl font-semibold">Riwayat saldo</h2></div><WalletCards size={19} className="text-black/30" /></div>
+        <div className="mt-5 space-y-2">
           {!data.transactions.length && <Empty text="Belum ada mutasi saldo." />}
-          {data.transactions.map((tx) => <div key={tx.id} className="flex items-center justify-between gap-4 rounded-xl border border-black/5 px-4 py-3"><div className="min-w-0"><div className="font-medium">{tx.transaction_type === "sale" ? "Pembayaran order" : tx.transaction_type === "withdrawal" ? "Penarikan saldo" : tx.transaction_type}</div><div className="truncate text-xs text-black/45">{tx.method || ""}{tx.destination ? ` · ${tx.destination}` : ""} · {new Date(tx.created_at).toLocaleString("id-ID")}</div>{tx.note && <div className="mt-1 text-xs text-black/45">{tx.note}</div>}</div><b className={tx.direction === "credit" ? "text-emerald-700" : "text-red-700"}>{tx.direction === "credit" ? "+" : "-"}{formatIDR(tx.amount)}</b></div>)}
+          {data.transactions.map((tx) => <motion.div layout key={tx.id} whileHover={{ x: 2 }} className="flex items-start justify-between gap-4 rounded-lg border border-black/5 px-4 py-3"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2 font-medium"><span>{tx.transaction_type === "sale" ? "Pembayaran order" : tx.transaction_type === "withdrawal" ? "Penarikan saldo" : tx.transaction_type}</span><span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${tx.direction === "credit" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>{tx.direction === "credit" ? "MASUK" : "KELUAR"}</span></div><div className="mt-1 truncate text-xs text-black/45">{tx.method || ""}{tx.destination ? ` · ${tx.destination}` : ""} · {new Date(tx.created_at).toLocaleString("id-ID")}</div>{tx.note && <div className="mt-1 text-xs text-black/45">{tx.note}</div>}</div><b className={tx.direction === "credit" ? "shrink-0 text-emerald-700" : "shrink-0 text-red-700"}>{tx.direction === "credit" ? "+" : "-"}{formatIDR(tx.amount)}</b></motion.div>)}
         </div>
       </section>
     </div>
@@ -531,8 +654,8 @@ function ProductEditor({ product, saving, onClose, onSave }: { product: Product;
 }
 
 function PageHeader({ eyebrow, title, text, action }: { eyebrow: string; title: string; text: string; action?: React.ReactNode }) { return <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs uppercase tracking-[.24em] text-black/35">{eyebrow}</p><h1 className="mt-2 text-3xl font-semibold tracking-tight lg:text-4xl">{title}</h1><p className="mt-2 max-w-3xl text-sm text-black/55">{text}</p></div>{action}</div>; }
-function Metric({ title, value, icon, positive }: { title: string; value: string; icon: React.ReactNode; positive?: boolean }) { return <motion.div whileHover={{ y: -2 }} transition={{ type: "spring", stiffness: 300 }} className={`${card} p-5`}><div className="flex items-center justify-between text-black/40"><div className="text-xs uppercase tracking-[.14em]">{title}</div>{icon}</div><div className={`mt-3 text-2xl font-semibold ${positive === false ? "text-red-700" : ""}`}>{value}</div></motion.div>; }
-function Panel({ title, children, className = "" }: { title: string; children: React.ReactNode; className?: string }) { return <section className={`${card} p-6 ${className}`}><h2 className="mb-5 text-lg font-semibold">{title}</h2>{children}</section>; }
+function Metric({ title, value, icon, positive }: { title: string; value: string; icon: React.ReactNode; positive?: boolean }) { return <motion.div whileHover={{ y: -2 }} transition={{ type: "spring", stiffness: 320, damping: 24 }} className={`${card} p-5`}><div className="flex items-start justify-between gap-3"><div className="text-xs uppercase tracking-[.14em] text-black/40">{title}</div><span className="text-black/30">{icon}</span></div><div className={`mt-3 text-2xl font-semibold tracking-tight ${positive === false ? "text-red-700" : "text-[#1B2A4A]"}`}>{value}</div></motion.div>; }
+function Panel({ title, children, className = "" }: { title: string; children: React.ReactNode; className?: string }) { return <section className={`${card} p-6 ${className}`}><div className="mb-5 flex items-center justify-between gap-4"><h2 className="text-lg font-semibold tracking-tight">{title}</h2></div>{children}</section>; }
 function Empty({ text }: { text: string }) { return <div className="rounded-xl bg-[#f6f3ed] p-5 text-sm text-black/50">{text}</div>; }
 function Field({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (v: string) => void; type?: string }) { return <label className="text-sm">{label}<input className={`${input} mt-2`} type={type} value={value} onChange={e => onChange(e.target.value)} /></label>; }
 function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) { return <div className="flex items-center justify-between border-b border-black/5 pb-3 last:border-0"><span className="text-black/50">{label}</span><b className={strong ? "text-[#1B2A4A]" : ""}>{value}</b></div>; }
